@@ -1,0 +1,533 @@
+import { useState, useMemo } from "react";
+import { Card, Button, Select, Input, Checkbox } from "./ui";
+import { Calculator, HardDrive, Monitor, Zap, UserCircle, Truck, Calendar, RefreshCw, AlertCircle } from "lucide-react";
+import { openWhatsApp } from "../utils/whatsapp";
+import { calculateEstimate } from "../utils/pricingCalculator";
+import { MX4_ADDON } from "../config/pricing";
+import { bookingPolicy } from "../config/bookingPolicy";
+
+type LaptopCategory = "biasa" | "gaming" | "unknown";
+type FanCount = "1" | "2" | "unknown";
+type MainService = "basic" | "deep" | "deep-repasta" | "none";
+type ServiceType = "panggilan" | "antar";
+
+const laptopCategories: { value: LaptopCategory; label: string }[] = [
+  { value: "biasa", label: "Laptop Biasa" },
+  { value: "gaming", label: "Laptop Gaming" },
+  { value: "unknown", label: "Belum Tahu" },
+];
+
+const fanCounts: { value: FanCount; label: string }[] = [
+  { value: "1", label: "1 Kipas" },
+  { value: "2", label: "2 Kipas" },
+  { value: "unknown", label: "Belum Tahu" },
+];
+
+const mainServices: { value: MainService; label: string; description: string }[] = [
+  { value: "basic", label: "Basic Cleaning", description: "Pembersihan debu pada kipas dan area ventilasi tanpa melepas heatsink." },
+  { value: "deep", label: "Deep Cleaning", description: "Pembongkaran untuk membersihkan kipas, heatsink, dan bagian dalam." },
+  { value: "deep-repasta", label: "Deep Cleaning + Repasta", description: "Pembersihan menyeluruh + ganti thermal paste." },
+  { value: "none", label: "Tidak diperlukan", description: "Hanya layanan tambahan di bawah." },
+];
+
+const extraServices: { value: string; label: string; price: number; desc: string }[] = [
+  { value: "backup", label: "Backup Data", price: 25000, desc: "Backup data penting sebelum pengerjaan." },
+  { value: "ssd-check", label: "Cek SSD/HDD", price: 25000, desc: "Pemeriksaan kondisi kesehatan penyimpanan." },
+  { value: "exterior", label: "Pembersihan Eksterior", price: 25000, desc: "Bersih body, keyboard, layar, port." },
+];
+
+const thermalPasteOptions: { value: string; label: string; price?: number }[] = [
+  { value: "z5", label: "DeepCool Z5 (Standar, sudah termasuk)", price: 0 },
+  { value: "mx4", label: "ARCTIC MX-4 (add-on Rp30.000)", price: MX4_ADDON },
+  { value: "none", label: "Tidak perlu ganti" },
+  { value: "consult", label: "Belum tahu, mau konsultasi" },
+];
+
+function getMinDate(): string {
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  return tomorrow.toISOString().split("T")[0];
+}
+
+function getRescheduleDeadline(dateStr: string): string {
+  if (!dateStr) return "";
+  const bookingDate = new Date(dateStr + "T00:00:00");
+  bookingDate.setDate(bookingDate.getDate() - 1);
+  return bookingDate.toLocaleDateString("id-ID", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+}
+
+export default function BookingForm() {
+  const [form, setForm] = useState<{
+    name: string;
+    whatsapp: string;
+    serviceType: ServiceType;
+    address: string;
+    locationLink: string;
+    brand: string;
+    model: string;
+    category: LaptopCategory;
+    fan: FanCount;
+    issue: string;
+    mainService: MainService;
+    extras: string[];
+    thermalPaste: string;
+    date: string;
+    time: string;
+    note: string;
+    agreePolicy: boolean;
+  }>({
+    name: "",
+    whatsapp: "",
+    serviceType: "panggilan",
+    address: "",
+    locationLink: "",
+    brand: "",
+    model: "",
+    category: "unknown",
+    fan: "unknown",
+    issue: "",
+    mainService: "none",
+    extras: [],
+    thermalPaste: "z5",
+    date: "",
+    time: "",
+    note: "",
+    agreePolicy: false,
+  });
+
+  const [touched, setTouched] = useState<Record<string, boolean>>({});
+  const minDate = getMinDate();
+
+  const estimate = useMemo(() => {
+    if (!form.brand || !form.model) return null;
+    return calculateEstimate({
+      category: form.category,
+      fan: form.fan,
+      mainService: form.mainService,
+      extras: form.extras as any,
+      thermalPaste: form.thermalPaste as any,
+    });
+  }, [form]);
+
+  const handleSelect = (field: string, value: string) => setForm({ ...form, [field]: value });
+
+  const validateForm = (): boolean => {
+    const required = ["name", "brand", "model", "serviceType", "address", "mainService", "date", "time"];
+    const newTouched: Record<string, boolean> = {};
+    required.forEach(f => newTouched[f] = true);
+    const basicValid = required.every(f => form[f as keyof typeof form] && String(form[f as keyof typeof form]).trim() !== "");
+    const policyValid = form.serviceType === "antar" ? true : form.agreePolicy === true;
+    if (!policyValid) newTouched["agreePolicy"] = true;
+    setTouched(newTouched);
+    return basicValid && policyValid;
+  };
+
+  const buildWhatsAppMessage = (): string => {
+    const lines = [
+      "Halo, saya ingin memesan jasa DAFFA LAPTOP CLEANING SERVICE.",
+      "",
+      "INFORMASI PELANGGAN",
+      `Nama: ${form.name}`,
+      `Nomor WhatsApp: ${form.whatsapp || " tidak diberikan"}`,
+      `Metode: ${form.serviceType === "panggilan" ? "Panggilan ke lokasi pelanggan" : "Antar laptop ke lokasi yang disepakati"}`,
+      `Lokasi: ${form.address}${form.locationLink ? `\nLink Lokasi: ${form.locationLink}` : ""}`,
+      "",
+      "INFORMASI LAPTOP",
+      `Merek & Model: ${form.brand} ${form.model}`,
+      `Kategori: ${laptopCategories.find(c => c.value === form.category)?.label || "Tidak diketahui"}`,
+      `Jumlah Kipas: ${fanCounts.find(f => f.value === form.fan)?.label || "Tidak diketahui"}`,
+      `Keluhan: ${form.issue || " tidak ada"}`,
+      "",
+      "DETAIL PESANAN",
+    ];
+
+    if (form.mainService !== "none") {
+      lines.push(`Layanan: ${mainServices.find(s => s.value === form.mainService)?.label || ""}`);
+    }
+    if (form.extras.length > 0) {
+      lines.push(`Layanan tambahan: ${form.extras.map(e => extraServices.find(s => s.value === e)?.label).join(", ")}`);
+    }
+    if (form.mainService === "deep-repasta") {
+      const tp = thermalPasteOptions.find(t => t.value === form.thermalPaste);
+      lines.push(`Thermal paste: ${tp?.label || ""}`);
+    }
+
+    lines.push(`Estimasi harga jasa: ${estimate?.totalLabel || "belum dihitung"}`);
+    lines.push("Estimasi transportasi: Belum dikonfirmasi (hanya untuk panggilan)");
+    lines.push("");
+    lines.push("JADWAL YANG DIINGINKAN");
+    lines.push(`Tanggal: ${form.date || " tidak ditentukan"}`);
+    lines.push(`Waktu: ${form.time || " tidak ditentukan"}`);
+    lines.push(`Catatan: ${form.note || " tidak ada"}`);
+    lines.push("");
+
+    // Booking Policy section in WA message
+    if (form.serviceType === "panggilan") {
+      lines.push("KEBIJAKAN BOOKING (OTOMATIS TERKIRIM)");
+      lines.push("✓ Setuju DP Rp50.000: Ya");
+      lines.push(`✓ Tanggal booking: ${form.date || "belum ditentukan"}`);
+      lines.push(`✓ Batas reschedule/cancel gratis: ${getRescheduleDeadline(form.date) || "belum ditentukan"} pukul 23:59`);
+      lines.push(`✓ Metode pembayaran DP: SeaBank 901251265521 a.n. Muhammad Daffa Daminatila`);
+      lines.push("✓ DP dipotong dari total biaya layanan (transportasi terpisah)");
+      lines.push("");
+      lines.push("LANGKAH SELANJUTNYA:");
+      lines.push("1. Kirim pesan ini");
+      lines.push("2. Transfer DP Rp50.000 ke rekening di atas");
+      lines.push("3. Kirim bukti transfer (SS/foto) di chat WhatsApp yang sama");
+      lines.push("4. Jadwal akan dikunci setelah bukti transfer diterima");
+      lines.push("");
+    }
+
+    lines.push("Mohon konfirmasi harga akhir, transportasi, dan ketersediaan jadwal. Terima kasih.");
+
+    return lines.join("\n");
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!validateForm()) return;
+
+    const message = buildWhatsAppMessage();
+    const success = openWhatsApp(message);
+    if (!success) alert(`Tidak dapat membuka WhatsApp. Silakan buka https://wa.me/${bookingPolicy.dpPaymentMethods[0]?.number}`);
+  };
+
+  const rescheduleDeadline = form.date ? getRescheduleDeadline(form.date) : null;
+  const requiresDP = form.serviceType === "panggilan";
+
+  return (
+    <section id="pesan" className="py-14 sm:py-20 bg-white">
+      <div className="max-w-4xl mx-auto px-4">
+        <header className="text-center mb-10">
+          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-slate-900">Formulir Pemesanan</h2>
+          <p className="mt-3 text-slate-600 max-w-2xl mx-auto">
+            Isi formulir untuk mendapatkan estimasi harga. Kami akan konfirmasi detail via WhatsApp.
+          </p>
+        </header>
+
+        {/* Booking Policy Notice - BEFORE form */}
+        <Card className="p-5 bg-emerald-50 border-emerald-200 mb-8">
+          <div className="flex items-start gap-3">
+            <AlertCircle size={22} className="text-emerald-600 flex-shrink-0 mt-0.5" aria-hidden="true" />
+            <div className="flex-1">
+              <h4 className="font-bold text-emerald-900 mb-2">Kebijakan Booking (Wajib Dibaca)</h4>
+              <ul className="space-y-1 text-sm text-emerald-800">
+                <li className="flex items-start gap-2">• <strong>DP Rp50.000</strong> wajib untuk metode <strong>Panggilan</strong> (dipotong dari total biaya layanan)</li>
+                <li className="flex items-start gap-2">• Reschedule / cancel gratis maksimal <strong>H-1 (24 jam sebelum)</strong></li>
+                <li className="flex items-start gap-2">• Lewat dari H-1 atau pembatalan → <strong>DP hangus</strong>, silakan booking ulang</li>
+                <li className="flex items-start gap-2">• Biaya transportasi <strong>terpisah</strong> & dikonfirmasi via WhatsApp</li>
+                <li className="flex items-start gap-2">• Rekening DP: <strong>SeaBank 901251265521 a.n. Muhammad Daffa Daminatila</strong></li>
+              </ul>
+            </div>
+          </div>
+        </Card>
+
+        <Card className="p-6 sm:p-10 bg-white">
+          <form onSubmit={handleSubmit} noValidate>
+            {/* INFORMASI PELANGGAN */}
+            <div className="mb-8">
+              <h3 className="text-xl font-bold text-slate-900 mb-4 flex items-center gap-2">
+                <UserCircle size={22} className="text-blue-500" /> Informasi Pelanggan
+              </h3>
+              <div className="grid md:grid-cols-2 gap-4">
+                <Input
+                  label="Nama Lengkap *"
+                  value={form.name}
+                  onChange={e => setForm({ ...form, name: e.target.value })}
+                  error={touched.name && !form.name ? "Nama wajib diisi" : undefined}
+                  placeholder="Nama lengkap Anda"
+                />
+                <Input
+                  label="Nomor WhatsApp"
+                  value={form.whatsapp}
+                  onChange={e => setForm({ ...form, whatsapp: e.target.value })}
+                  placeholder="62812xxxxxx"
+                />
+              </div>
+            </div>
+
+            {/* METODE LAYANAN */}
+            <div className="mb-8">
+              <h3 className="text-xl font-bold text-slate-900 mb-4 flex items-center gap-2">
+                <Truck size={22} className="text-blue-500" /> Metode Layanan
+              </h3>
+              <div className="space-y-3">
+                <Select
+                  label="Pilih Metode"
+                  value={form.serviceType}
+                  onChange={e => handleSelect("serviceType", e.target.value)}
+                  options={[
+                    { value: "panggilan", label: "Panggilan ke lokasi pelanggan (wajib DP)" },
+                    { value: "antar", label: "Antar laptop ke lokasi yang disepakati (tanpa DP)" },
+                  ]}
+                />
+                <div>
+                  <Input
+                    label={form.serviceType === "panggilan" ? "Alamat Lengkap *" : "Lokasi Penyerahan"}
+                    value={form.address}
+                    onChange={e => setForm({ ...form, address: e.target.value })}
+                    error={touched.address && !form.address ? "Alamat wajib diisi" : undefined}
+                    placeholder="Alamat lengkap atau nama jalan..."
+                  />
+                  <Input
+                    label="Link Google Maps (opsional)"
+                    value={form.locationLink}
+                    onChange={e => setForm({ ...form, locationLink: e.target.value })}
+                    placeholder="https://maps.google.com/..."
+                    className="mt-2"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* INFORMASI LAPTOP */}
+            <div className="mb-8">
+              <h3 className="text-xl font-bold text-slate-900 mb-4 flex items-center gap-2">
+                <Monitor size={22} className="text-blue-500" /> Informasi Laptop
+              </h3>
+              <div className="grid md:grid-cols-2 gap-4">
+                <Input
+                  label="Merek Laptop *"
+                  value={form.brand}
+                  onChange={e => setForm({ ...form, brand: e.target.value })}
+                  error={touched.brand && !form.brand ? "Merek wajib diisi" : undefined}
+                  placeholder="Dell, HP, ASUS, Lenovo..."
+                />
+                <Input
+                  label="Model Laptop *"
+                  value={form.model}
+                  onChange={e => setForm({ ...form, model: e.target.value })}
+                  error={touched.model && !form.model ? "Model wajib diisi" : undefined}
+                  placeholder="Model spesifik laptop"
+                />
+              </div>
+              <div className="grid md:grid-cols-2 gap-4 mt-4">
+                <Select
+                  label="Kategori Laptop"
+                  value={form.category}
+                  onChange={e => handleSelect("category", e.target.value)}
+                  options={laptopCategories}
+                />
+                <Select
+                  label="Jumlah Kipas Pendingin"
+                  value={form.fan}
+                  onChange={e => handleSelect("fan", e.target.value)}
+                  options={fanCounts}
+                />
+              </div>
+              <Input
+                label="Keluhan atau kondisi"
+                value={form.issue}
+                onChange={e => setForm({ ...form, issue: e.target.value })}
+                placeholder="misal: laptop sering hang, pendinginan tidak baik..."
+                className="mt-4"
+              />
+            </div>
+
+            {/* PILIHAN LAYANAN */}
+            <div className="mb-8">
+              <h3 className="text-xl font-bold text-slate-900 mb-4 flex items-center gap-2">
+                <Zap size={22} className="text-blue-500" /> Pilihan Layanan
+              </h3>
+              <div className="space-y-3">
+                {mainServices.map(s => (
+                  <label key={s.value} className="flex items-center gap-3 p-3 bg-white rounded-xl border border-slate-200 cursor-pointer hover:bg-slate-50">
+                    <input
+                      type="radio"
+                      name="mainService"
+                      value={s.value}
+                      checked={form.mainService === s.value}
+                      onChange={e => handleSelect("mainService", e.target.value)}
+                      className="w-5 h-5 text-blue-600"
+                    />
+                    <div>
+                      <div className="font-medium text-slate-900">{s.label}</div>
+                      <div className="text-sm text-slate-500">{s.description}</div>
+                    </div>
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            {/* LAYANAN TAMBAHAN */}
+            <div className="mb-8">
+              <h3 className="text-xl font-bold text-slate-900 mb-4 flex items-center gap-2">
+                <HardDrive size={22} className="text-blue-500" /> Layanan Tambahan
+              </h3>
+              <div className="space-y-3">
+                {extraServices.map(e => (
+                  <label key={e.value} className="flex items-center gap-3 p-3 bg-white rounded-xl border border-slate-200 cursor-pointer hover:bg-slate-50">
+                    <Checkbox
+                      checked={form.extras.includes(e.value)}
+                      onCheckedChange={checked => {
+                        if (checked) {
+                          setForm({ ...form, extras: [...form.extras, e.value] });
+                        } else {
+                          setForm({ ...form, extras: form.extras.filter(x => x !== e.value) });
+                        }
+                      }}
+                      label=""
+                    />
+                    <div className="flex items-center justify-between w-full">
+                      <div>
+                        <div className="font-medium text-slate-900">{e.label}</div>
+                        <div className="text-sm text-slate-500">{e.desc}</div>
+                      </div>
+                      <span className="font-semibold text-blue-600">Rp{e.price.toLocaleString("id-ID")}</span>
+                    </div>
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            {/* THERMAL PASTE */}
+            <div className="mb-8">
+              <h3 className="text-xl font-bold text-slate-900 mb-4 flex items-center gap-2">
+                <RefreshCw size={22} className="text-blue-500" /> Pilihan Thermal Paste
+              </h3>
+              {form.mainService === "deep-repasta" && (
+                <div className="space-y-3">
+                  {thermalPasteOptions.map(t => (
+                    <label key={t.value} className="flex items-center gap-3 p-3 bg-white rounded-xl border border-slate-200 cursor-pointer hover:bg-slate-50">
+                      <input
+                        type="radio"
+                        name="thermalPaste"
+                        value={t.value}
+                        checked={form.thermalPaste === t.value}
+                        onChange={e => handleSelect("thermalPaste", e.target.value)}
+                        className="w-5 h-5 text-blue-600"
+                      />
+                      <div className="flex items-center justify-between w-full">
+                        <div>
+                          <div className="font-medium text-slate-900">{t.label}</div>
+                          {t.price && t.price > 0 && <div className="text-sm text-slate-500">Tambah: Rp{t.price.toLocaleString("id-ID")}</div>}
+                        </div>
+                        {t.price && t.price > 0 && <span className="font-semibold text-amber-600">+ Rp30.000</span>}
+                      </div>
+                    </label>
+                  ))}
+                </div>
+              )}
+              {form.mainService !== "deep-repasta" && (
+                <p className="text-slate-500 text-sm">*Thermal paste hanya relevan bila memilih repasta</p>
+              )}
+            </div>
+
+            {/* JADWAL */}
+            <div className="mb-8">
+              <h3 className="text-xl font-bold text-slate-900 mb-4 flex items-center gap-2">
+                <Calendar size={22} className="text-blue-500" /> Jadwal yang Diinginkan
+              </h3>
+              <div className="grid md:grid-cols-2 gap-4">
+                <Input
+                  label="Tanggal yang diinginkan *"
+                  type="date"
+                  min={minDate}
+                  value={form.date}
+                  onChange={e => setForm({ ...form, date: e.target.value })}
+                  error={touched.date && !form.date ? "Tanggal wajib diisi (minimal besok)" : undefined}
+                />
+                <Input
+                  label="Rentang waktu *"
+                  value={form.time}
+                  onChange={e => setForm({ ...form, time: e.target.value })}
+                  error={touched.time && !form.time ? "Waktu wajib diisi" : undefined}
+                  placeholder="misal: 09.00 - 12.00"
+                />
+              </div>
+              {rescheduleDeadline && requiresDP && (
+                <p className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-xl text-amber-800 text-sm">
+                  <strong>⏰ Batas reschedule / cancel gratis:</strong> {rescheduleDeadline} pukul 23:59
+                  <br />Lewat dari itu DP Rp50.000 hangus & booking ulang.
+                </p>
+              )}
+              <Input
+                label="Catatan tambahan"
+                value={form.note}
+                onChange={e => setForm({ ...form, note: e.target.value })}
+                placeholder="Spesifikasi tambahan, masalah khusus..."
+                className="mt-4"
+              />
+              <p className="mt-2 text-xs text-slate-500">
+                * Jadwal yang dipilih merupakan permintaan, bukan booking otomatis.
+                Kami akan konfirmasi ketersediaan via WhatsApp.
+              </p>
+            </div>
+
+            {/* ESTIMASI */}
+            {estimate && (
+              <Card className="p-5 bg-gradient-to-r from-blue-50 via-slate-50 to-purple-50 border-blue-200 mb-6">
+                <h4 className="font-bold text-slate-900 mb-3 flex items-center gap-2">
+                  <Calculator size={20} className="text-blue-500" /> Estimasi Harga
+                </h4>
+                <div className="space-y-2 mb-3">
+                  {estimate.lines.map((line, i) => (
+                    <div key={i} className="flex justify-between text-sm">
+                      <span className="text-slate-700">{line.label}</span>
+                      <span className="font-medium text-slate-900">{line.amount}</span>
+                    </div>
+                  ))}
+                </div>
+                <div className="border-t border-blue-200 pt-3 mb-3">
+                  <div className="flex justify-between items-center">
+                    <span className="font-bold text-slate-900">Total Estimasi:</span>
+                    <span className="text-xl font-extrabold text-blue-600">{estimate.totalLabel}</span>
+                  </div>
+                </div>
+                {estimate.needsConfirmation && (
+                  <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 mb-2">
+                    <p className="text-amber-800 text-sm font-medium">
+                      ⚠️ Harga akhir perlu dikonfirmasi via WhatsApp karena perbedaan kategori/ kondisi laptop.
+                    </p>
+                  </div>
+                )}
+                {estimate.notes.length > 0 && (
+                  <ul className="space-y-1 text-xs text-slate-600 mb-2">
+                    {estimate.notes.map((n, i) => (<li key={i}>• {n}</li>))}
+                  </ul>
+                )}
+                <p className="text-xs text-slate-500">
+                  Estimasi belum termasuk transportasi. Harga akhir dikonfirmasi sebelum pengerjaan.
+                </p>
+              </Card>
+            )}
+
+            {/* DP CHECKBOX - WAJIB */}
+            {requiresDP && (
+              <div className="mb-6 p-4 bg-emerald-50 border border-emerald-200 rounded-xl">
+                <label className="flex items-start gap-3 cursor-pointer">
+                  <Checkbox
+                    checked={form.agreePolicy}
+                    onCheckedChange={checked => setForm({ ...form, agreePolicy: checked })}
+                    label=""
+                  />
+                  <div className="text-sm text-emerald-900 leading-relaxed pt-0.5">
+                    <strong>Saya menyetujui kebijakan booking:</strong> DP Rp50.000 wajib untuk metode Panggilan (dipotong dari total biaya layanan).
+                    Reschedule / cancel gratis maksimal H-1 (24 jam sebelum jadwal).
+                    Lewat dari H-1 atau pembatalan → DP hangus, silakan booking ulang.
+                    Biaya transportasi terpisah & dikonfirmasi via WhatsApp.
+                    <br />
+                    Rekening DP: <strong>SeaBank 901251265521 a.n. Muhammad Daffa Daminatila</strong>
+                  </div>
+                </label>
+                {touched.agreePolicy && !form.agreePolicy && (
+                  <p className="mt-2 text-sm text-red-500" role="alert">Wajib menyetujui kebijakan booking untuk melanjutkan</p>
+                )}
+              </div>
+            )}
+
+            {/* SUBMIT */}
+            <Button
+              type="submit"
+              size="lg"
+              className="w-full"
+              disabled={requiresDP && !form.agreePolicy}
+            >
+              {requiresDP && !form.agreePolicy ? "Centang persetujuan kebijakan dulu" : "Kirim Pesanan via WhatsApp"}
+            </Button>
+          </form>
+        </Card>
+      </div>
+    </section>
+  );
+}
