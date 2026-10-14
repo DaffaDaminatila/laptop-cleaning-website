@@ -31,7 +31,7 @@ const mainServices: { value: MainService; label: string; description: string }[]
 
 const extraServices: { value: string; label: string; price: number; desc: string }[] = [
   { value: "backup", label: "Backup Data", price: 25000, desc: "Backup data penting sebelum pengerjaan." },
-  { value: "ssd-check", label: "Cek SSD/HDD", price: 25000, desc: "Pemeriksaan kondisi kesehatan penyimpanan." },
+  { value: "ssd-check", label: "Cek SSD/HDD", price: 10000, desc: "Pemeriksaan kondisi kesehatan penyimpanan." },
   { value: "exterior", label: "Pembersihan Eksterior", price: 25000, desc: "Bersih body, keyboard, layar, port." },
 ];
 

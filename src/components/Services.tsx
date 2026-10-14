@@ -65,12 +65,12 @@ const additional = [
     price: 25000,
   },
   {
-    id: "ssd-check",
-    icon: HardDrive,
-    title: "Cek SSD/HDD",
-    desc: "Pemeriksaan kondisi kesehatan penyimpanan.",
-    price: 25000,
-  },
+      id: "ssd-check",
+      icon: HardDrive,
+      title: "Cek SSD/HDD",
+      desc: "Pemeriksaan kondisi kesehatan penyimpanan.",
+      price: 10000,
+    },
   {
     id: "exterior",
     icon: Sparkles,
