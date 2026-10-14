@@ -27,7 +27,7 @@ export default function Pricing() {
           </h2>
           <p className="mt-3 text-slate-600 max-w-2xl mx-auto">
             Harga transparan per kategori laptop. Rentang harga pada gaming = variasi model/konstruksi.
-            Thermal paste standar DeepCool Z5 sudah termasuk. ARCTIC MX-4 add-on Rp30.000.
+            Thermal paste standar DeepCool Z5 sudah termasuk. ARCTIC MX-4 add-on Rp15.000.
           </p>
         </header>
 

@@ -5,12 +5,13 @@ export const businessConfig = {
   operatingSchedule: "Dengan janji terlebih dahulu",
   serviceModes: [
     "Panggilan ke lokasi pelanggan",
-    "Antar laptop ke lokasi yang disepakati"
+    "Antar laptop ke lokasi yang disepakati",
   ],
   currency: "IDR",
   title: "Jasa Cleaning Laptop Bogor | Daffa Laptop Cleaning Service",
-  description: "Layanan cleaning laptop, deep cleaning, repasta thermal paste, instal ulang Windows, dan instal aplikasi di Bogor dan sekitarnya. Melayani panggilan ke rumah atau antar laptop. Pengerjaan berdasarkan janji.",
-  ogImage: "/og-image.jpg"
+  description:
+    "Layanan cleaning laptop, deep cleaning, repasta thermal paste, instal ulang Windows, dan instal aplikasi di Bogor dan sekitarnya. Melayani panggilan ke rumah atau antar laptop. Pengerjaan berdasarkan janji.",
+  ogImage: "/og-image.jpg",
 };
 
 export const formatWhatsAppUrl = (message: string) => {

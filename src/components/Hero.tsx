@@ -1,10 +1,13 @@
 import { MapPin, Truck, CalendarCheck, Tag } from "lucide-react";
 import { MessageCircle } from "lucide-react";
 import { businessConfig, formatDisplayPhone } from "../config/business";
-import { openWhatsApp, INQUIRY_MESSAGE } from "../utils/whatsapp";
 import { Button } from "./ui";
 
 export default function Hero() {
+  const scrollToForm = () => {
+    document.querySelector("#pesan")?.scrollIntoView({ behavior: "smooth" });
+  };
+
   const scrollToPricing = () => {
     document.querySelector("#harga")?.scrollIntoView({ behavior: "smooth" });
   };
@@ -47,7 +50,7 @@ export default function Hero() {
             <Button
               variant="whatsapp"
               size="lg"
-              onClick={() => openWhatsApp(INQUIRY_MESSAGE)}
+              onClick={scrollToForm}
               className="w-full sm:w-auto"
             >
               <MessageCircle size={20} className="mr-2" aria-hidden="true" />

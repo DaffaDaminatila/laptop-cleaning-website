@@ -20,7 +20,10 @@ export default function Navbar() {
 
   return (
     <header className="fixed top-0 inset-x-0 z-40 bg-white border-b border-slate-200">
-      <nav className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between" aria-label="Navigasi utama">
+      <nav
+        className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between"
+        aria-label="Navigasi utama"
+      >
         <button onClick={() => scrollTo("#beranda")} className="text-left">
           <span className="block text-slate-900 font-extrabold tracking-tight text-sm sm:text-base leading-tight">
             DAFFA LAPTOP
@@ -31,20 +34,24 @@ export default function Navbar() {
         </button>
 
         <div className="hidden md:flex items-center gap-6">
-          {links.map((l) => (
-            <button
-              key={l.href}
-              onClick={() => scrollTo(l.href)}
-              className="text-slate-600 hover:text-slate-900 text-sm font-medium min-h-[48px] inline-flex items-center"
-            >
-              {l.label}
-            </button>
-          ))}
-          <Button variant="whatsapp" size="sm" onClick={() => scrollTo("#pesan")}>
-            <MessageCircle size={16} className="mr-1.5" />
-            Pesan via WhatsApp
-          </Button>
-        </div>
+                  {links.map((l) => (
+                    <button
+                      key={l.href}
+                      onClick={() => scrollTo(l.href)}
+                      className="text-slate-600 hover:text-slate-900 text-sm font-medium min-h-[48px] inline-flex items-center"
+                    >
+                      {l.label}
+                    </button>
+                  ))}
+                  <Button
+                    variant="whatsapp"
+                    size="sm"
+                    onClick={() => scrollTo("#pesan")}
+                  >
+                    <MessageCircle size={16} className="mr-1.5" />
+                    Pesan via WhatsApp
+                  </Button>
+                </div>
 
         <button
           className="md:hidden text-slate-900 p-3 -mr-2 min-w-[48px] min-h-[48px] inline-flex items-center justify-center"
@@ -67,7 +74,11 @@ export default function Navbar() {
               {l.label}
             </button>
           ))}
-          <Button variant="whatsapp" className="w-full mt-2" onClick={() => scrollTo("#pesan")}>
+          <Button
+            variant="whatsapp"
+            className="w-full mt-2"
+            onClick={() => scrollTo("#pesan")}
+          >
             <MessageCircle size={18} className="mr-1.5" />
             Pesan via WhatsApp
           </Button>

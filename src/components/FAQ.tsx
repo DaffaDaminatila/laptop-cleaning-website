@@ -17,7 +17,7 @@ const faqs = [
   },
   {
     q: "Apakah harga sudah termasuk thermal paste?",
-    a: "Harga paket Deep Cleaning + Repasta sudah termasuk thermal paste standar (DeepCool Z5). Jika ingin ARCTIC MX-4, terdapat add-on Rp30.000."
+    a: "Harga paket Deep Cleaning + Repasta sudah termasuk thermal paste standar (DeepCool Z5). Jika ingin ARCTIC MX-4, terdapat add-on Rp15.000.",
   },
   {
     q: "Apa perbedaan basic cleaning dan deep cleaning?",

@@ -5,7 +5,7 @@ export type ExtraService =
   | "windows"
   | "app-install"
   | "backup"
-  | "ssd-check"
+  // | "ssd-check"
   | "exterior";
 export type ThermalPaste = "z5" | "mx4" | "none" | "consult";
 
@@ -39,10 +39,10 @@ export const extraPrices: Record<
   ExtraService,
   { label: string; price: number }
 > = {
-  windows: { label: "Instal Ulang Windows", price: 150000 },
+  windows: { label: "Instal Ulang Windows", price: 100000 },
   "app-install": { label: "Instal Aplikasi Lainnya", price: 50000 },
   backup: { label: "Backup Data", price: 25000 },
-  "ssd-check": { label: "Cek Kondisi SSD/HDD", price: 25000 },
+  // "ssd-check": { label: "Cek Kondisi SSD/HDD", price: 25000 },
   exterior: { label: "Pembersihan Eksterior", price: 25000 },
 };
 
@@ -53,7 +53,7 @@ export const MAIN_SERVICE_LABELS: Record<MainService, string> = {
   none: "Tidak / hanya layanan lain",
 };
 
-export const MX4_ADDON = 30000;
+export const MX4_ADDON = 15000;
 
 export function priceKey(category: LaptopCategory, fan: FanCount): string {
   if (category === "gaming" && fan === "2") return "gaming2";

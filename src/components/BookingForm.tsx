@@ -1,10 +1,9 @@
 import { useState, useMemo } from "react";
 import { Card, Button, Select, Input, Checkbox } from "./ui";
 import { Calculator, HardDrive, Monitor, Zap, UserCircle, Truck, Calendar, RefreshCw, AlertCircle } from "lucide-react";
-import { openWhatsApp } from "../utils/whatsapp";
+import { openWhatsApp, buildOrderMessage } from "../utils/whatsapp";
 import { calculateEstimate } from "../utils/pricingCalculator";
 import { MX4_ADDON } from "../config/pricing";
-import { bookingPolicy } from "../config/bookingPolicy";
 
 type LaptopCategory = "biasa" | "gaming" | "unknown";
 type FanCount = "1" | "2" | "unknown";
@@ -38,7 +37,7 @@ const extraServices: { value: string; label: string; price: number; desc: string
 
 const thermalPasteOptions: { value: string; label: string; price?: number }[] = [
   { value: "z5", label: "DeepCool Z5 (Standar, sudah termasuk)", price: 0 },
-  { value: "mx4", label: "ARCTIC MX-4 (add-on Rp30.000)", price: MX4_ADDON },
+  { value: "mx4", label: "ARCTIC MX-4 (add-on Rp15.000)", price: MX4_ADDON },
   { value: "none", label: "Tidak perlu ganti" },
   { value: "consult", label: "Belum tahu, mau konsultasi" },
 ];
@@ -112,88 +111,27 @@ export default function BookingForm() {
   const handleSelect = (field: string, value: string) => setForm({ ...form, [field]: value });
 
   const validateForm = (): boolean => {
-    const required = ["name", "brand", "model", "serviceType", "address", "mainService", "date", "time"];
-    const newTouched: Record<string, boolean> = {};
-    required.forEach(f => newTouched[f] = true);
-    const basicValid = required.every(f => form[f as keyof typeof form] && String(form[f as keyof typeof form]).trim() !== "");
-    const policyValid = form.serviceType === "antar" ? true : form.agreePolicy === true;
-    if (!policyValid) newTouched["agreePolicy"] = true;
-    setTouched(newTouched);
-    return basicValid && policyValid;
-  };
+      const required = ["name", "brand", "model", "serviceType", "address", "mainService", "date", "time"];
+      const newTouched: Record<string, boolean> = {};
+      required.forEach(f => newTouched[f] = true);
+      const basicValid = required.every(f => form[f as keyof typeof form] && String(form[f as keyof typeof form]).trim() !== "");
+      const policyValid = form.serviceType === "antar" ? true : form.agreePolicy === true;
+      if (!policyValid) newTouched["agreePolicy"] = true;
+      setTouched(newTouched);
+      return basicValid && policyValid;
+    };
 
-  const buildWhatsAppMessage = (): string => {
-    const lines = [
-      "Halo, saya ingin memesan jasa DAFFA LAPTOP CLEANING SERVICE.",
-      "",
-      "INFORMASI PELANGGAN",
-      `Nama: ${form.name}`,
-      `Nomor WhatsApp: ${form.whatsapp || " tidak diberikan"}`,
-      `Metode: ${form.serviceType === "panggilan" ? "Panggilan ke lokasi pelanggan" : "Antar laptop ke lokasi yang disepakati"}`,
-      `Lokasi: ${form.address}${form.locationLink ? `\nLink Lokasi: ${form.locationLink}` : ""}`,
-      "",
-      "INFORMASI LAPTOP",
-      `Merek & Model: ${form.brand} ${form.model}`,
-      `Kategori: ${laptopCategories.find(c => c.value === form.category)?.label || "Tidak diketahui"}`,
-      `Jumlah Kipas: ${fanCounts.find(f => f.value === form.fan)?.label || "Tidak diketahui"}`,
-      `Keluhan: ${form.issue || " tidak ada"}`,
-      "",
-      "DETAIL PESANAN",
-    ];
+    const handleSubmit = async (e: React.FormEvent) => {
+      e.preventDefault();
+      if (!validateForm()) return;
 
-    if (form.mainService !== "none") {
-      lines.push(`Layanan: ${mainServices.find(s => s.value === form.mainService)?.label || ""}`);
-    }
-    if (form.extras.length > 0) {
-      lines.push(`Layanan tambahan: ${form.extras.map(e => extraServices.find(s => s.value === e)?.label).join(", ")}`);
-    }
-    if (form.mainService === "deep-repasta") {
-      const tp = thermalPasteOptions.find(t => t.value === form.thermalPaste);
-      lines.push(`Thermal paste: ${tp?.label || ""}`);
-    }
+      const message = buildOrderMessage(form, estimate || undefined);
+      const success = openWhatsApp(message);
+      if (!success) alert("Tidak dapat membuka WhatsApp. Silakan buka https://wa.me/6281285526337");
+    };
 
-    lines.push(`Estimasi harga jasa: ${estimate?.totalLabel || "belum dihitung"}`);
-    lines.push("Estimasi transportasi: Belum dikonfirmasi (hanya untuk panggilan)");
-    lines.push("");
-    lines.push("JADWAL YANG DIINGINKAN");
-    lines.push(`Tanggal: ${form.date || " tidak ditentukan"}`);
-    lines.push(`Waktu: ${form.time || " tidak ditentukan"}`);
-    lines.push(`Catatan: ${form.note || " tidak ada"}`);
-    lines.push("");
-
-    // Booking Policy section in WA message
-    if (form.serviceType === "panggilan") {
-      lines.push("KEBIJAKAN BOOKING (OTOMATIS TERKIRIM)");
-      lines.push("✓ Setuju DP Rp50.000: Ya");
-      lines.push(`✓ Tanggal booking: ${form.date || "belum ditentukan"}`);
-      lines.push(`✓ Batas reschedule/cancel gratis: ${getRescheduleDeadline(form.date) || "belum ditentukan"} pukul 23:59`);
-      lines.push(`✓ Metode pembayaran DP: SeaBank 901251265521 a.n. Muhammad Daffa Daminatila`);
-      lines.push("✓ DP dipotong dari total biaya layanan (transportasi terpisah)");
-      lines.push("");
-      lines.push("LANGKAH SELANJUTNYA:");
-      lines.push("1. Kirim pesan ini");
-      lines.push("2. Transfer DP Rp50.000 ke rekening di atas");
-      lines.push("3. Kirim bukti transfer (SS/foto) di chat WhatsApp yang sama");
-      lines.push("4. Jadwal akan dikunci setelah bukti transfer diterima");
-      lines.push("");
-    }
-
-    lines.push("Mohon konfirmasi harga akhir, transportasi, dan ketersediaan jadwal. Terima kasih.");
-
-    return lines.join("\n");
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!validateForm()) return;
-
-    const message = buildWhatsAppMessage();
-    const success = openWhatsApp(message);
-    if (!success) alert(`Tidak dapat membuka WhatsApp. Silakan buka https://wa.me/${bookingPolicy.dpPaymentMethods[0]?.number}`);
-  };
-
-  const rescheduleDeadline = form.date ? getRescheduleDeadline(form.date) : null;
-  const requiresDP = form.serviceType === "panggilan";
+    const rescheduleDeadline = form.date ? getRescheduleDeadline(form.date) : null;
+    const requiresDP = form.serviceType === "panggilan";
 
   return (
     <section id="pesan" className="py-14 sm:py-20 bg-white overflow-x-hidden">
@@ -418,7 +356,7 @@ export default function BookingForm() {
                           <div className="font-medium text-slate-900 text-sm sm:text-base break-words">{t.label}</div>
                           {t.price && t.price > 0 && <div className="text-[13px] sm:text-sm text-slate-500">Tambah: Rp{t.price.toLocaleString("id-ID")}</div>}
                         </div>
-                        {t.price && t.price > 0 && <span className="font-semibold text-amber-600 text-sm sm:text-base whitespace-nowrap flex-shrink-0">+ Rp30.000</span>}
+                        {t.price && t.price > 0 && <span className="font-semibold text-amber-600 text-sm sm:text-base whitespace-nowrap flex-shrink-0">+ Rp{t.price.toLocaleString("id-ID")}</span>}
                       </div>
                     </label>
                   ))}
