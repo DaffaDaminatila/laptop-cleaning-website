@@ -1,10 +1,11 @@
 import { useState, useMemo, useEffect } from "react";
 import { Card, Button, Select, Input, Checkbox } from "./ui";
-import { Calculator, HardDrive, Monitor, Zap, UserCircle, Truck, Calendar, RefreshCw, AlertCircle, Loader2, CheckCircle2, Sparkles } from "lucide-react";
+import { Calculator, HardDrive, Monitor, Zap, UserCircle, Truck, Calendar, RefreshCw, AlertCircle, Loader2, CheckCircle2, Sparkles, MapPin } from "lucide-react";
 import { openWhatsApp, buildOrderMessage } from "../utils/whatsapp";
 import { calculateEstimate } from "../utils/pricingCalculator";
 import { MX4_ADDON } from "../config/pricing";
 import { classifyLaptop, LaptopClassification, categoryDisplayMap, fanCountDisplayMap } from "../config/pricing";
+import { calculateTransportCost } from "../config/transport";
 
 type LaptopCategory = "biasa" | "gaming" | "unknown";
 type FanCount = "1" | "2" | "unknown";
@@ -104,39 +105,71 @@ export default function BookingForm() {
     const [showManualOverride, setShowManualOverride] = useState(false);
 
     // Auto-classify when brand & model change
-    useEffect(() => {
-      if (!form.brand.trim() || !form.model.trim()) {
-        setClassification(null);
-        return;
-      }
-    
-      const runClassification = async () => {
-        setIsClassifying(true);
-        try {
-          // Keyword-based instant classification
-          const result = classifyLaptop(form.brand, form.model);
-          setClassification(result);
-          setShowManualOverride(result.confidence !== "high");
-        
-          // Auto-fill if high confidence
-          if (result.confidence === "high") {
-            setForm(prev => ({
-              ...prev,
-              category: result.category,
-              fan: result.fanCount,
-            }));
-          }
-        } catch (e) {
-          console.error("Classification error:", e);
-        } finally {
-          setIsClassifying(false);
+      useEffect(() => {
+        if (!form.brand.trim() || !form.model.trim()) {
+          setClassification(null);
+          return;
         }
-      };
+  
+        const runClassification = async () => {
+          setIsClassifying(true);
+          try {
+            // Keyword-based instant classification
+            const result = classifyLaptop(form.brand, form.model);
+            setClassification(result);
+            setShowManualOverride(result.confidence !== "high");
+     
+            // Auto-fill if high confidence
+            if (result.confidence === "high") {
+              setForm(prev => ({
+                ...prev,
+                category: result.category,
+                fan: result.fanCount,
+              }));
+            }
+          } catch (e) {
+            console.error("Classification error:", e);
+          } finally {
+            setIsClassifying(false);
+          }
+        };
 
-      runClassification();
-    }, [form.brand, form.model]);
+        runClassification();
+      }, [form.brand, form.model]);
 
-    const estimate = useMemo(() => {
+      // Transport calculation state
+      const [transport, setTransport] = useState<{
+        km: number;
+        price: number;
+        tierLabel: string;
+        needsConfirmation: boolean;
+        geocodedAddress: string | null;
+        error?: string;
+        calculating: boolean;
+      } | null>(null);
+
+      // Auto-calculate transport when address changes (only for panggilan)
+      useEffect(() => {
+        if (form.serviceType !== "panggilan" || !form.address.trim()) {
+          setTransport(null);
+          return;
+        }
+
+        const runTransportCalc = async () => {
+          setTransport(prev => prev ? { ...prev, calculating: true } : null);
+          try {
+            const result = await calculateTransportCost(form.address);
+            setTransport({ ...result, calculating: false });
+          } catch (e) {
+            console.error("Transport calc error:", e);
+            setTransport({ km: 0, price: 0, tierLabel: "Error", needsConfirmation: true, geocodedAddress: null, calculating: false, error: "Gagal menghitung jarak" });
+          }
+        };
+
+        runTransportCalc();
+      }, [form.address, form.serviceType]);
+
+      const estimate = useMemo(() => {
       // Hitung estimasi begitu data pricing utama lengkap (kategori, kipas, layanan)
       // Brand & Model hanya untuk identifikasi, tidak butuh buat hitung harga
       const hasPricingData = form.category !== "unknown" && 
@@ -167,13 +200,13 @@ export default function BookingForm() {
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
-      e.preventDefault();
-      if (!validateForm()) return;
+          e.preventDefault();
+          if (!validateForm()) return;
 
-      const message = buildOrderMessage(form, estimate || undefined);
-      const success = openWhatsApp(message);
-      if (!success) alert("Tidak dapat membuka WhatsApp. Silakan buka https://wa.me/6281285526337");
-    };
+          const message = buildOrderMessage(form, estimate || undefined, transport || undefined);
+          const success = openWhatsApp(message);
+          if (!success) alert("Tidak dapat membuka WhatsApp. Silakan buka https://wa.me/6281285526337");
+        };
 
     const rescheduleDeadline = form.date ? getRescheduleDeadline(form.date) : null;
     const requiresDP = form.serviceType === "panggilan";
@@ -259,15 +292,72 @@ export default function BookingForm() {
                     placeholder="Alamat lengkap atau nama jalan..."
                   />
                   <Input
-                    label="Link Google Maps (opsional)"
-                    value={form.locationLink}
-                    onChange={e => setForm({ ...form, locationLink: e.target.value })}
-                    placeholder="https://maps.google.com/..."
-                    className="mt-2"
-                  />
-                </div>
-              </div>
-            </div>
+                                      label="Link Google Maps (opsional)"
+                                      value={form.locationLink}
+                                      onChange={e => setForm({ ...form, locationLink: e.target.value })}
+                                      placeholder="https://maps.google.com/..."
+                                      className="mt-2"
+                                    />
+                                  </div>
+
+                                  {/* TRANSPORT ESTIMATION - only for panggilan */}
+                                  {form.serviceType === "panggilan" && form.address.trim() && (
+                                    <div className="mt-4 p-4 rounded-xl border bg-blue-50 border-blue-200 min-w-0 overflow-hidden">
+                                      <div className="flex items-center gap-2 mb-3">
+                                        <MapPin size={20} className="text-blue-500 flex-shrink-0" />
+                                        <span className="font-semibold text-slate-900">Estimasi Ongkos Panggilan</span>
+                                      </div>
+                                      {transport && transport.calculating && (
+                                        <div className="flex items-center gap-3 text-sm text-blue-700">
+                                          <Loader2 size={18} className="animate-spin" />
+                                          Menghitung jarak dari base Ciawi...
+                                        </div>
+                                      )}
+                                      {transport && !transport.calculating && !transport.error && (
+                                        <div className="space-y-2">
+                                          <div className="flex justify-between gap-2 text-sm">
+                                            <span className="text-slate-700 min-w-0 break-words">Jarak (garis lurus):</span>
+                                            <span className="font-medium text-slate-900 whitespace-nowrap flex-shrink-0">~{transport.km} km</span>
+                                          </div>
+                                          <div className="flex justify-between gap-2 text-sm">
+                                            <span className="text-slate-700 min-w-0 break-words">Zona:</span>
+                                            <span className="font-medium text-slate-900 whitespace-nowrap flex-shrink-0">{transport.tierLabel}</span>
+                                          </div>
+                                          <div className="border-t border-blue-200 pt-2">
+                                            <div className="flex justify-between gap-2">
+                                              <span className="font-bold text-slate-900 text-base">Ongkos Panggilan:</span>
+                                              {transport.needsConfirmation ? (
+                                                <span className="text-lg font-extrabold text-amber-600 flex-shrink-0">
+                                                  Konfirmasi Admin
+                                                </span>
+                                              ) : (
+                                                <span className="text-lg font-extrabold text-emerald-600 text-right flex-shrink-0">
+                                                  {transport.price.toLocaleString("id-ID")}
+                                                </span>
+                                              )}
+                                            </div>
+                                          </div>
+                                          {transport.geocodedAddress && (
+                                            <p className="text-[11px] text-slate-500 break-words">
+                                              Lokasi terdeteksi: {transport.geocodedAddress.substring(0, 120)}{transport.geocodedAddress.length > 120 ? "..." : ""}
+                                            </p>
+                                          )}
+                                        </div>
+                                      )}
+                                      {transport && transport.error && (
+                                        <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                                          <p className="text-red-700 text-sm">{transport.error}</p>
+                                          <p className="text-[12px] text-red-500 mt-1">Silakan isi alamat lengkap atau tambahkan link Google Maps untuk akurasi lebih baik.</p>
+                                        </div>
+                                      )}
+                                      <p className="text-[11px] text-slate-500 mt-2 leading-relaxed">
+                                        * Jarak dihitung garis lurus dari base Ciawi, Bogor. Harga final dikonfirmasi via WhatsApp.
+                                        Base: Gg. Inpres, Teluk Pinang, Ciawi, Bogor 16138.
+                                      </p>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
 
             {/* INFORMASI LAPTOP */}
             <div className="mb-8">
@@ -509,42 +599,78 @@ export default function BookingForm() {
             </div>
 
             {/* ESTIMASI */}
-            {estimate && (
-              <Card className="p-4 sm:p-5 bg-blue-50 border-blue-200 mb-6 overflow-hidden">
-                <h4 className="font-bold text-slate-900 mb-3 flex items-center gap-2 text-sm sm:text-base">
-                  <Calculator size={20} className="text-blue-500 flex-shrink-0" /> Estimasi Harga
-                </h4>
-                <div className="space-y-2 mb-3">
-                  {estimate.lines.map((line, i) => (
-                    <div key={i} className="flex justify-between gap-2 text-sm">
-                      <span className="text-slate-700 min-w-0 break-words">{line.label}</span>
-                      <span className="font-medium text-slate-900 whitespace-nowrap flex-shrink-0">{line.amount}</span>
-                    </div>
-                  ))}
-                </div>
-                <div className="border-t border-blue-200 pt-3 mb-3">
-                  <div className="flex justify-between items-center gap-2">
-                    <span className="font-bold text-slate-900 text-sm sm:text-base">Total Estimasi:</span>
-                    <span className="text-lg sm:text-xl font-extrabold text-blue-600 text-right break-words">{estimate.totalLabel}</span>
-                  </div>
-                </div>
-                {estimate.needsConfirmation && (
-                  <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 mb-2">
-                    <p className="text-amber-800 text-[13px] sm:text-sm font-medium leading-relaxed">
-                      ⚠️ Harga akhir perlu dikonfirmasi via WhatsApp karena perbedaan kategori/ kondisi laptop.
-                    </p>
-                  </div>
-                )}
-                {estimate.notes.length > 0 && (
-                  <ul className="space-y-1 text-xs text-slate-600 mb-2 break-words">
-                    {estimate.notes.map((n, i) => (<li key={i}>• {n}</li>))}
-                  </ul>
-                )}
-                <p className="text-xs text-slate-500 leading-relaxed">
-                  Estimasi belum termasuk transportasi. Harga akhir dikonfirmasi sebelum pengerjaan.
-                </p>
-              </Card>
-            )}
+                        {estimate && (
+                          <Card className="p-4 sm:p-5 bg-blue-50 border-blue-200 mb-6 overflow-hidden">
+                            <h4 className="font-bold text-slate-900 mb-3 flex items-center gap-2 text-sm sm:text-base">
+                              <Calculator size={20} className="text-blue-500 flex-shrink-0" /> Estimasi Harga
+                            </h4>
+                            <div className="space-y-2 mb-3">
+                              {estimate.lines.map((line, i) => (
+                                <div key={i} className="flex justify-between gap-2 text-sm">
+                                  <span className="text-slate-700 min-w-0 break-words">{line.label}</span>
+                                  <span className="font-medium text-slate-900 whitespace-nowrap flex-shrink-0">{line.amount}</span>
+                                </div>
+                              ))}
+                              {/* Transport line */}
+                              {form.serviceType === "panggilan" && transport && !transport.calculating && !transport.error && (
+                                <div className="flex justify-between gap-2 text-sm pt-2 border-t border-blue-200">
+                                  <span className="text-slate-700 min-w-0 break-words">Ongkos Panggilan ({transport.tierLabel}, ~{transport.km} km)</span>
+                                  {transport.needsConfirmation ? (
+                                    <span className="font-medium text-amber-600 whitespace-nowrap flex-shrink-0">Konfirmasi Admin</span>
+                                  ) : (
+                                    <span className="font-medium text-emerald-600 whitespace-nowrap flex-shrink-0">Rp{transport.price.toLocaleString("id-ID")}</span>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                            <div className="border-t border-blue-200 pt-3 mb-3">
+                              <div className="flex justify-between items-center gap-2">
+                                <span className="font-bold text-slate-900 text-sm sm:text-base">Total Estimasi:</span>
+                                <span className="text-lg sm:text-xl font-extrabold text-blue-600 text-right break-words">
+                                  {(() => {
+                                    const serviceTotal = estimate.totalMax !== null && estimate.totalMax !== estimate.totalMin
+                                      ? `Estimasi Rp${estimate.totalMin.toLocaleString("id-ID")}–${estimate.totalMax.toLocaleString("id-ID")}`
+                                      : `Rp${estimate.totalMin.toLocaleString("id-ID")}`;
+                                    if (form.serviceType === "panggilan" && transport && !transport.calculating && !transport.error && !transport.needsConfirmation) {
+                                      const grandTotal = estimate.totalMin + transport.price;
+                                      const grandMax = estimate.totalMax !== null ? estimate.totalMax + transport.price : null;
+                                      if (grandMax !== null && grandMax !== grandTotal) {
+                                        return `Estimasi Rp${grandTotal.toLocaleString("id-ID")}–${grandMax.toLocaleString("id-ID")} (termasuk transport)`;
+                                      }
+                                      return `Rp${grandTotal.toLocaleString("id-ID")} (termasuk transport Rp${transport.price.toLocaleString("id-ID")})`;
+                                    }
+                                    if (form.serviceType === "panggilan" && transport && !transport.calculating && !transport.error && transport.needsConfirmation) {
+                                      return `${serviceTotal} + Transport (Konfirmasi Admin)`;
+                                    }
+                                    return serviceTotal;
+                                  })()}
+                                </span>
+                              </div>
+                            </div>
+                            {estimate.needsConfirmation && (
+                              <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 mb-2">
+                                <p className="text-amber-800 text-[13px] sm:text-sm font-medium leading-relaxed">
+                                  ⚠️ Harga akhir perlu dikonfirmasi via WhatsApp karena perbedaan kategori/ kondisi laptop.
+                                </p>
+                              </div>
+                            )}
+                            {estimate.notes.length > 0 && (
+                              <ul className="space-y-1 text-xs text-slate-600 mb-2 break-words">
+                                {estimate.notes.map((n, i) => (<li key={i}>• {n}</li>))}
+                              </ul>
+                            )}
+                            {form.serviceType === "panggilan" && transport && transport.needsConfirmation && (
+                                                          <p className="text-xs text-amber-700 leading-relaxed mb-2">
+                                                            {"⚠️ Ongkos panggilan "} {">30 km"} {" memerlukan konfirmasi admin via WhatsApp."}
+                                                          </p>
+                                                        )}
+                            <p className="text-xs text-slate-500 leading-relaxed">
+                              {form.serviceType === "panggilan" 
+                                ? "Harga layanan + transport dikonfirmasi sebelum pengerjaan." 
+                                : "Harga akhir dikonfirmasi sebelum pengerjaan."}
+                            </p>
+                          </Card>
+                        )}
 
             {/* DP CHECKBOX - WAJIB */}
             {requiresDP && (

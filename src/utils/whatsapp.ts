@@ -20,11 +20,22 @@ export function openWhatsApp(message: string): boolean {
 export const INQUIRY_MESSAGE = "Halo, saya ingin bertanya mengenai jasa cleaning laptop.";
 
 // Build full order message from form data
-export function buildOrderMessage(form: Record<string, any>, estimate?: { 
-  totalLabel: string; 
-  lines: Array<{ label: string; amount: string }>;
-  needsConfirmation?: boolean;
-}): string {
+export function buildOrderMessage(
+  form: Record<string, any>,
+  estimate?: {
+    totalLabel: string;
+    lines: Array<{ label: string; amount: string }>;
+    needsConfirmation?: boolean;
+  },
+  transport?: {
+    km: number;
+    tierLabel: string;
+    price: number;
+    needsConfirmation: boolean;
+    calculating: boolean;
+    error?: string;
+  }
+): string {
   const lines = [
     "📋 *PEMESANAN CLEANING LAPTOP*",
     "",
@@ -33,8 +44,17 @@ export function buildOrderMessage(form: Record<string, any>, estimate?: {
     `WhatsApp: ${form.whatsapp || "-"}`,
     `Metode: ${form.serviceType === "panggilan" ? "Panggilan ke lokasi (wajib DP)" : "Antar laptop (tanpa DP)"}`,
     `Alamat: ${form.address || "-"}`,
-    form.locationLink ? `Link Maps: ${form.locationLink}` : "",
-    "",
+        form.locationLink ? `Link Maps: ${form.locationLink}` : "",
+        form.serviceType === "panggilan" && transport && !transport.calculating && !transport.error
+          ? `Jarak: ~${transport.km} km (${transport.tierLabel})`
+          : "",
+        form.serviceType === "panggilan" && transport && !transport.calculating && !transport.error && !transport.needsConfirmation
+          ? `Transport: Rp${transport.price.toLocaleString("id-ID")}`
+          : "",
+        form.serviceType === "panggilan" && transport && transport.needsConfirmation
+          ? "Transport: Konfirmasi Admin (>30 km)"
+          : "",
+        "",
     "💻 *Informasi Laptop*",
     `Merek: ${form.brand || "-"}`,
     `Model: ${form.model || "-"}`,
