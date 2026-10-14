@@ -5,7 +5,7 @@ export type ExtraService =
   | "windows"
   | "app-install"
   | "backup"
-  // | "ssd-check"
+  | "ssd-check"
   | "exterior";
 export type ThermalPaste = "z5" | "mx4" | "none" | "consult";
 
@@ -42,7 +42,7 @@ export const extraPrices: Record<
   windows: { label: "Instal Ulang Windows", price: 100000 },
   "app-install": { label: "Instal Aplikasi Lainnya", price: 50000 },
   backup: { label: "Backup Data", price: 25000 },
-  // "ssd-check": { label: "Cek Kondisi SSD/HDD", price: 25000 },
+  "ssd-check": { label: "Cek Kondisi SSD/HDD", price: 10000 },
   exterior: { label: "Pembersihan Eksterior", price: 25000 },
 };
 

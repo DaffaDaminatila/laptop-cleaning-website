@@ -49,7 +49,7 @@ export default function Navbar() {
                     onClick={() => scrollTo("#pesan")}
                   >
                     <MessageCircle size={16} className="mr-1.5" />
-                    Pesan via WhatsApp
+                                        Pesan Sekarang
                   </Button>
                 </div>
 
@@ -80,7 +80,7 @@ export default function Navbar() {
             onClick={() => scrollTo("#pesan")}
           >
             <MessageCircle size={18} className="mr-1.5" />
-            Pesan via WhatsApp
+                        Pesan Sekarang
           </Button>
         </div>
       )}

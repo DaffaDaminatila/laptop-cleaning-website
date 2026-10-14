@@ -54,7 +54,7 @@ export default function Hero() {
               className="w-full sm:w-auto"
             >
               <MessageCircle size={20} className="mr-2" aria-hidden="true" />
-              Pesan via WhatsApp
+                            Pesan Sekarang
             </Button>
             <Button variant="outline" size="lg" onClick={scrollToPricing} className="w-full sm:w-auto">
               <Tag size={18} className="mr-2" aria-hidden="true" />
