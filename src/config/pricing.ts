@@ -21,16 +21,10 @@ export const cleaningPrices: Record<string, Record<MainService, PriceValue>> = {
     "deep-repasta": { min: 125000, max: null },
     none: { min: 0, max: null },
   },
-  gaming1: {
+  gaming: {
     basic: { min: 100000, max: null },
     deep: { min: 150000, max: null },
-    "deep-repasta": { min: 185000, max: 250000 },
-    none: { min: 0, max: null },
-  },
-  gaming2: {
-    basic: { min: 150000, max: null },
-    deep: { min: 175000, max: null },
-    "deep-repasta": { min: 200000, max: 350000 },
+    "deep-repasta": { min: 200000, max: 450000 },
     none: { min: 0, max: null },
   },
   unknown: {
@@ -101,31 +95,84 @@ export interface LaptopClassification {
  */
 const GAMING_KEYWORDS = [
   // Brand gaming
-  "rog", "tuf", "strix", "zephyrus", "scar", "flow", "vivo",
-  "predator", "nitro", "helios", "triton", "aphros",
-  "omen", "victus",
-  "legion", "loq",
-  "alienware", "g15", "g16",
-  "katana", "sword", "pulse", "crosshair", "stealth", "raider", "vector", "titan", "cyborg", "thin", "gf63", "creator",
-  "blade", "razer",
-  "pongo", "xplay",
-  "aorus", "g5",
+  "rog",
+  "tuf",
+  "strix",
+  "zephyrus",
+  "scar",
+  "flow",
+  "vivo",
+  "predator",
+  "nitro",
+  "helios",
+  "triton",
+  "aphros",
+  "omen",
+  "victus",
+  "legion",
+  "loq",
+  "alienware",
+  "g15",
+  "g16",
+  "katana",
+  "sword",
+  "pulse",
+  "crosshair",
+  "stealth",
+  "raider",
+  "vector",
+  "titan",
+  "cyborg",
+  "thin",
+  "gf63",
+  "creator",
+  "blade",
+  "razer",
+  "pongo",
+  "xplay",
+  "aorus",
+  "g5",
   // GPU keywords
-  "rtx", "gtx", "rx ",
-  "3050", "3060", "3070", "3080", "3090",
-  "4050", "4060", "4070", "4080", "4090",
-  "5060", "5070", "5080", "5090",
-  "4050", "4060", "4070", "4080", "4090",
+  "rtx",
+  "gtx",
+  "rx ",
+  "3050",
+  "3060",
+  "3070",
+  "3080",
+  "3090",
+  "4050",
+  "4060",
+  "4070",
+  "4080",
+  "4090",
+  "5060",
+  "5070",
+  "5080",
+  "5090",
+  "4050",
+  "4060",
+  "4070",
+  "4080",
+  "4090",
 ];
 
 const FAN2_KEYWORDS = [
-  "2 fan", "2 kipas", "dual fan", "twin fan", "2x fan",
-  "2-kipas", "2-kipat", "2kipa", "dual kipas", "twin kipas",
+  "2 fan",
+  "2 kipas",
+  "dual fan",
+  "twin fan",
+  "2x fan",
+  "2-kipas",
+  "2-kipat",
+  "2kipa",
+  "dual kipas",
+  "twin kipas",
 ];
 
 export function classifyLaptop(
   brand: string,
-  model: string
+  model: string,
 ): LaptopClassification {
   const text = `${brand} ${model}`.toLowerCase();
 
@@ -168,8 +215,8 @@ export function classifyLaptop(
     categoryConfidence === "high" && fanConfidence === "high"
       ? "high"
       : categoryConfidence === "high" || fanConfidence === "high"
-      ? "medium"
-      : "low";
+        ? "medium"
+        : "low";
 
   return {
     category,
@@ -187,7 +234,7 @@ export function classifyLaptop(
 export async function classifyLaptopWithAI(
   _brand: string,
   _model: string,
-  _extraInfo?: string
+  _extraInfo?: string,
 ): Promise<LaptopClassification | null> {
   // TODO: Implementasi panggil Vercel Function / AI API
   // Contoh:
@@ -207,7 +254,7 @@ export async function classifyLaptopWithAI(
  */
 export async function autoClassifyLaptop(
   brand: string,
-  model: string
+  model: string,
 ): Promise<{
   classification: LaptopClassification;
   usedAI: boolean;

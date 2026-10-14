@@ -7,78 +7,36 @@ import {
   HardDrive,
   Sparkles,
 } from "lucide-react";
+import {
+  cleaningPrices,
+  extraPrices,
+} from "../config/pricing";
 
 const mainServices = [
-  {
-    id: "basic",
-    icon: Fan,
-    title: "Basic Cleaning",
-    desc: "Pembersihan debu pada kipas dan area ventilasi tanpa melepas heatsink.",
-    includes: ["Bersih kipas", "Bersih ventilasi", "Cek suhu dasar"],
-    basePrice: 75000,
-  },
-  {
-    id: "deep",
-    icon: Cpu,
-    title: "Deep Cleaning",
-    desc: "Pembongkaran yang diperlukan untuk membersihkan kipas, heatsink, dan bagian dalam laptop.",
-    includes: [
-      "Bersih kipas + heatsink",
-      "Bersih pasta lama",
-      "Cek kondisi fisik",
-    ],
-    basePrice: 100000,
-  },
-  {
-    id: "deep-repasta",
-    icon: RefreshCw,
-    title: "Deep Cleaning + Repasta",
-    desc: "Pembersihan menyeluruh dan penggantian thermal paste pada komponen yang memang menggunakannya.",
-    includes: ["Deep cleaning full", "Ganti thermal paste", "Cek suhu pasca"],
-    basePrice: 150000,
-  },
+  { id: "basic", icon: Fan, title: "Basic Cleaning", desc: "Pembersihan debu pada kipas dan area ventilasi tanpa melepas heatsink.", includes: ["Bersih kipas", "Bersih ventilasi", "Cek suhu dasar"] },
+  { id: "deep", icon: Cpu, title: "Deep Cleaning", desc: "Pembongkaran yang diperlukan untuk membersihkan kipas, heatsink, dan bagian dalam laptop.", includes: ["Bersih kipas + heatsink", "Bersih pasta lama", "Cek kondisi fisik"] },
+  { id: "deep-repasta", icon: RefreshCw, title: "Deep Cleaning + Repasta", desc: "Pembersihan menyeluruh dan penggantian thermal paste pada komponen yang memang menggunakannya.", includes: ["Deep cleaning full", "Ganti thermal paste", "Cek suhu pasca"] },
 ];
 
 const softwareServices = [
-  {
-    id: "windows",
-    icon: Monitor,
-    title: "Instal Ulang Windows",
-    desc: "Instalasi ulang sistem operasi dan driver dasar sesuai kebutuhan perangkat.",
-    basePrice: 150000,
-  },
-  {
-    id: "app-install",
-    icon: Package,
-    title: "Instal Aplikasi",
-    desc: "Instalasi aplikasi yang disepakati dengan pelanggan.",
-    basePrice: 50000,
-  },
+  { id: "windows", icon: Monitor, title: "Instal Ulang Windows", desc: "Instalasi ulang sistem operasi dan driver dasar sesuai kebutuhan perangkat." },
+  { id: "app-install", icon: Package, title: "Instal Aplikasi", desc: "Instalasi aplikasi yang disepakati dengan pelanggan." },
 ];
 
 const additional = [
-  {
-    id: "backup",
-    icon: HardDrive,
-    title: "Backup Data",
-    desc: "Backup data penting sebelum pengerjaan.",
-    price: 25000,
-  },
-  {
-      id: "ssd-check",
-      icon: HardDrive,
-      title: "Cek SSD/HDD",
-      desc: "Pemeriksaan kondisi kesehatan penyimpanan.",
-      price: 10000,
-    },
-  {
-    id: "exterior",
-    icon: Sparkles,
-    title: "Pembersihan Eksterior",
-    desc: "Bersih body, keyboard, layar, port.",
-    price: 25000,
-  },
+  { id: "backup", icon: HardDrive, title: "Backup Data", desc: "Backup data penting sebelum pengerjaan." },
+  { id: "ssd-check", icon: HardDrive, title: "Cek SSD/HDD", desc: "Pemeriksaan kondisi kesehatan penyimpanan." },
+  { id: "exterior", icon: Sparkles, title: "Pembersihan Eksterior", desc: "Bersih body, keyboard, layar, port." },
 ];
+
+function getBasePrice(serviceId: string, category: "biasa" | "gaming" = "biasa"): number {
+  const price = cleaningPrices[category]?.[serviceId as keyof typeof cleaningPrices["biasa"]];
+  return price?.min ?? 0;
+}
+
+function getExtraPrice(serviceId: string): number {
+  return extraPrices[serviceId as keyof typeof extraPrices]?.price ?? 0;
+}
 
 export default function Services() {
   return (
@@ -104,7 +62,7 @@ export default function Services() {
         <div className="grid gap-8 lg:grid-cols-[60fr_40fr]">
           <div>
             <h3 className="text-sm font-semibold tracking-widest uppercase text-slate-500 mb-4">
-              Perawatan &amp; pendingin
+              Perawatan & pendingin
             </h3>
             <ol className="divide-y divide-slate-200 border-y border-slate-200">
               {mainServices.map((s, i) => (
@@ -124,7 +82,7 @@ export default function Services() {
                     <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
                       <h4 className="font-bold text-slate-900">{s.title}</h4>
                       <span className="text-sm font-semibold text-slate-900">
-                        Mulai dari Rp{s.basePrice.toLocaleString("id-ID")}
+                        Mulai dari Rp{getBasePrice(s.id, "biasa").toLocaleString("id-ID")}
                       </span>
                     </div>
                     <p className="mt-1 text-sm text-slate-600">{s.desc}</p>
@@ -139,7 +97,7 @@ export default function Services() {
 
           <div>
             <h3 className="text-sm font-semibold tracking-widest uppercase text-slate-500 mb-4">
-              Perangkat lunak &amp; tambahan
+              Perangkat lunak & tambahan
             </h3>
             <ul className="space-y-3">
               {softwareServices.map((s) => (
@@ -158,7 +116,7 @@ export default function Services() {
                         {s.title}
                       </h4>
                       <span className="text-sm font-bold text-slate-900">
-                        Rp{s.basePrice.toLocaleString("id-ID")}
+                        Rp{getExtraPrice(s.id).toLocaleString("id-ID")}
                       </span>
                     </div>
                     <p className="mt-1 text-sm text-slate-600">{s.desc}</p>
@@ -184,7 +142,7 @@ export default function Services() {
                     <p className="text-xs text-slate-500">{a.desc}</p>
                   </div>
                   <span className="text-sm font-semibold text-slate-900 whitespace-nowrap">
-                    Rp{a.price.toLocaleString("id-ID")}
+                    Rp{getExtraPrice(a.id).toLocaleString("id-ID")}
                   </span>
                 </li>
               ))}

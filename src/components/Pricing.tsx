@@ -7,8 +7,7 @@ import {
 
 const categoryTabs = [
   { key: "biasa", label: "Laptop Biasa", icon: Laptop },
-  { key: "gaming1", label: "Gaming 1 Kipas", icon: Zap },
-  { key: "gaming2", label: "Gaming 2 Kipas", icon: Zap },
+  { key: "gaming", label: "Laptop Gaming", icon: Zap },
 ];
 
 const mainServices = [
@@ -26,7 +25,7 @@ export default function Pricing() {
             Daftar Harga
           </h2>
           <p className="mt-3 text-slate-600 max-w-2xl mx-auto">
-            Harga transparan per kategori laptop. Rentang harga pada gaming = variasi model/konstruksi.
+            Harga transparan per kategori laptop. Rentang harga pada gaming = variasi model/konstruksi (1 atau 2 kipas).
             Thermal paste standar DeepCool Z5 sudah termasuk. ARCTIC MX-4 add-on Rp15.000.
           </p>
         </header>
@@ -74,6 +73,11 @@ export default function Pricing() {
                     })}
                   </tbody>
                 </table>
+                {cat.key === "gaming" && (
+                  <p className="mt-3 text-xs text-slate-500">
+                    * Harga gaming adalah rentang untuk 1–2 kipas. Estimasi exact muncul di formulir pemesanan setelah pilih jumlah kipas.
+                  </p>
+                )}
               </Card>
             );
           })}
