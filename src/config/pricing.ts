@@ -18,7 +18,7 @@ export const cleaningPrices: Record<string, Record<MainService, PriceValue>> = {
   biasa: {
     basic: { min: 75000, max: null },
     deep: { min: 100000, max: null },
-    "deep-repasta": { min: 150000, max: null },
+    "deep-repasta": { min: 125000, max: null },
     none: { min: 0, max: null },
   },
   gaming1: {
