@@ -67,14 +67,45 @@ function toRad(deg: number): number {
 }
 
 /**
+ * Check if URL is a Google Maps short link that needs server-side resolution
+ */
+function isGoogleMapsShortLink(url: string): boolean {
+  return /maps\.app\.goo\.gl/i.test(url) || /goo\.gl\/maps/i.test(url);
+}
+
+/**
+ * Resolve Google Maps short link via Vercel serverless function
+ * Returns { lat, lng, displayName } or null
+ */
+async function resolveShortLink(shortUrl: string): Promise<{ lat: number; lng: number; displayName: string } | null> {
+  try {
+    const apiUrl = `/api/resolve-maps?url=${encodeURIComponent(shortUrl)}`;
+    const res = await fetch(apiUrl);
+    if (!res.ok) return null;
+    const data = await res.json();
+    if (data.lat && data.lng) {
+      return {
+        lat: data.lat,
+        lng: data.lng,
+        displayName: `Google Maps short link (${data.lat.toFixed(6)}, ${data.lng.toFixed(6)})`,
+      };
+    }
+    return null;
+  } catch (e) {
+    console.error("Resolve short link error:", e);
+    return null;
+  }
+}
+
+/**
  * Parse Google Maps URL to extract coordinates
  * Supports formats:
  * - https://www.google.com/maps/search/?api=1&query=-6.123,106.456
  * - https://www.google.com/maps/@-6.123,106.456,15z
  * - https://www.google.com/maps/place/Something/@-6.123,106.456,15z
  * - https://maps.google.com/?q=-6.123,106.456
- * - https://goo.gl/maps/xxx (shortened - would need redirect follow, skip for now)
  * - Direct coordinates: "-6.123, 106.456"
+ * NOTE: Short links (maps.app.goo.gl, goo.gl/maps) need server-side redirect follow
  */
 export function parseGoogleMapsUrl(url: string): { lat: number; lng: number } | null {
   try {
@@ -144,7 +175,7 @@ export async function geocodeAddress(address: string): Promise<{ lat: number; ln
 
 /**
  * Calculate transport cost from base to customer address
- * Priority: Google Maps link (exact coords) → Nominatim geocoding
+ * Priority: Google Maps link (exact coords) → short link resolution → Nominatim geocoding
  * Returns { km, price, tierLabel, needsConfirmation, geocodedAddress, error? }
  */
 export async function calculateTransportCost(
@@ -160,7 +191,7 @@ export async function calculateTransportCost(
 }> {
   let geo: { lat: number; lng: number; displayName: string } | null = null;
 
-  // 1. Try Google Maps link first (exact coordinates)
+  // 1. Try Google Maps link first (exact coordinates from full URL)
   if (locationLink && locationLink.trim()) {
     const parsed = parseGoogleMapsUrl(locationLink.trim());
     if (parsed) {
@@ -170,9 +201,13 @@ export async function calculateTransportCost(
         displayName: `Koordinat dari Google Maps (${parsed.lat.toFixed(6)}, ${parsed.lng.toFixed(6)})`,
       };
     }
+    // 2. Try short link resolution (maps.app.goo.gl, goo.gl/maps)
+    else if (isGoogleMapsShortLink(locationLink.trim())) {
+      geo = await resolveShortLink(locationLink.trim());
+    }
   }
 
-  // 2. Fallback to Nominatim geocoding
+  // 3. Fallback to Nominatim geocoding
   if (!geo) {
     geo = await geocodeAddress(customerAddress);
     if (!geo) {
