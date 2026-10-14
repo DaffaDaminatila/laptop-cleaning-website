@@ -1,9 +1,10 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Card, Button, Select, Input, Checkbox } from "./ui";
-import { Calculator, HardDrive, Monitor, Zap, UserCircle, Truck, Calendar, RefreshCw, AlertCircle } from "lucide-react";
+import { Calculator, HardDrive, Monitor, Zap, UserCircle, Truck, Calendar, RefreshCw, AlertCircle, Loader2, CheckCircle2, Sparkles } from "lucide-react";
 import { openWhatsApp, buildOrderMessage } from "../utils/whatsapp";
 import { calculateEstimate } from "../utils/pricingCalculator";
 import { MX4_ADDON } from "../config/pricing";
+import { classifyLaptop, LaptopClassification, categoryDisplayMap, fanCountDisplayMap } from "../config/pricing";
 
 type LaptopCategory = "biasa" | "gaming" | "unknown";
 type FanCount = "1" | "2" | "unknown";
@@ -95,9 +96,47 @@ export default function BookingForm() {
   });
 
   const [touched, setTouched] = useState<Record<string, boolean>>({});
-  const minDate = getMinDate();
+    const minDate = getMinDate();
 
-  const estimate = useMemo(() => {
+    // Auto-classification state
+    const [classification, setClassification] = useState<LaptopClassification | null>(null);
+    const [isClassifying, setIsClassifying] = useState(false);
+    const [showManualOverride, setShowManualOverride] = useState(false);
+
+    // Auto-classify when brand & model change
+    useEffect(() => {
+      if (!form.brand.trim() || !form.model.trim()) {
+        setClassification(null);
+        return;
+      }
+    
+      const runClassification = async () => {
+        setIsClassifying(true);
+        try {
+          // Keyword-based instant classification
+          const result = classifyLaptop(form.brand, form.model);
+          setClassification(result);
+          setShowManualOverride(result.confidence !== "high");
+        
+          // Auto-fill if high confidence
+          if (result.confidence === "high") {
+            setForm(prev => ({
+              ...prev,
+              category: result.category,
+              fan: result.fanCount,
+            }));
+          }
+        } catch (e) {
+          console.error("Classification error:", e);
+        } finally {
+          setIsClassifying(false);
+        }
+      };
+
+      runClassification();
+    }, [form.brand, form.model]);
+
+    const estimate = useMemo(() => {
       // Hitung estimasi begitu data pricing utama lengkap (kategori, kipas, layanan)
       // Brand & Model hanya untuk identifikasi, tidak butuh buat hitung harga
       const hasPricingData = form.category !== "unknown" && 
@@ -236,43 +275,92 @@ export default function BookingForm() {
                 <Monitor size={22} className="text-blue-500 flex-shrink-0" /> Informasi Laptop
               </h3>
               <div className="grid md:grid-cols-2 gap-4">
-                <div className="min-w-0">
-                <Input
-                  label="Merek Laptop *"
-                  value={form.brand}
-                  onChange={e => setForm({ ...form, brand: e.target.value })}
-                  error={touched.brand && !form.brand ? "Merek wajib diisi" : undefined}
-                  placeholder="Dell, HP, ASUS, Lenovo..."
-                />
-                </div>
-                <div className="min-w-0">
-                <Input
-                  label="Model Laptop *"
-                  value={form.model}
-                  onChange={e => setForm({ ...form, model: e.target.value })}
-                  error={touched.model && !form.model ? "Model wajib diisi" : undefined}
-                  placeholder="Model spesifik laptop"
-                />
-                </div>
-              </div>
-              <div className="grid md:grid-cols-2 gap-4 mt-4">
-                <div className="min-w-0">
-                <Select
-                  label="Kategori Laptop"
-                  value={form.category}
-                  onChange={e => handleSelect("category", e.target.value)}
-                  options={laptopCategories}
-                />
-                </div>
-                <div className="min-w-0">
-                <Select
-                  label="Jumlah Kipas Pendingin"
-                  value={form.fan}
-                  onChange={e => handleSelect("fan", e.target.value)}
-                  options={fanCounts}
-                />
-                </div>
-              </div>
+                              <div className="min-w-0">
+                              <Input
+                                label="Merek Laptop *"
+                                value={form.brand}
+                                onChange={e => setForm({ ...form, brand: e.target.value })}
+                                error={touched.brand && !form.brand ? "Merek wajib diisi" : undefined}
+                                placeholder="Dell, HP, ASUS, Lenovo..."
+                              />
+                              </div>
+                              <div className="min-w-0">
+                              <Input
+                                label="Model Laptop *"
+                                value={form.model}
+                                onChange={e => setForm({ ...form, model: e.target.value })}
+                                error={touched.model && !form.model ? "Model wajib diisi" : undefined}
+                                placeholder="Model spesifik laptop"
+                              />
+                              </div>
+                            </div>
+
+                            {/* AUTO CLASSIFICATION RESULT */}
+                            {classification && (
+                              <div className="mt-4 p-3 rounded-xl border flex items-center gap-3 min-w-0"
+                                   style={{
+                                     backgroundColor: classification.confidence === "high" ? "#ecfdf5" : 
+                                                       classification.confidence === "medium" ? "#fffbeb" : "#fef2f2",
+                                     borderColor: classification.confidence === "high" ? "#a7f3d0" : 
+                                                  classification.confidence === "medium" ? "#fde68a" : "#fecaca",
+                                   }}>
+                                {isClassifying ? (
+                                  <Loader2 size={20} className="text-blue-500 animate-spin flex-shrink-0" />
+                                ) : classification.confidence === "high" ? (
+                                  <CheckCircle2 size={20} className="text-emerald-500 flex-shrink-0" />
+                                ) : (
+                                  <Sparkles size={20} className="text-amber-500 flex-shrink-0" />
+                                )}
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    <span className="font-medium text-sm text-slate-900">
+                                      {classification.confidence === "high" ? "✓ Terdeteksi otomatis" : 
+                                       classification.confidence === "medium" ? "⚡ Deteksi sebagian" : "❓ Perlu konfirmasi"}
+                                    </span>
+                                    <span className="text-[11px] px-2 py-0.5 rounded-full"
+                                          style={{
+                                            backgroundColor: classification.confidence === "high" ? "#d1fae5" : 
+                                                             classification.confidence === "medium" ? "#fef3c7" : "#fee2e2",
+                                            color: classification.confidence === "high" ? "#065f46" : 
+                                                   classification.confidence === "medium" ? "#92400e" : "#991b1b",
+                                          }}>
+                                      {classification.confidence.toUpperCase()}
+                                    </span>
+                                  </div>
+                                  <div className="flex items-center gap-4 mt-1 text-sm text-slate-600 flex-wrap min-w-0 break-words">
+                                    <span>Kategori: <strong>{categoryDisplayMap[classification.category]}</strong></span>
+                                    <span>Kipas: <strong>{fanCountDisplayMap[classification.fanCount]}</strong></span>
+                                  </div>
+                                  <p className="text-[12px] text-slate-500 mt-1 break-words">{classification.reason}</p>
+                                </div>
+                                {showManualOverride && (
+                                  <Button type="button" variant="outline" size="sm" 
+                                          onClick={() => setShowManualOverride(true)}
+                                          className="flex-shrink-0">
+                                    Atur Manual
+                                  </Button>
+                                )}
+                              </div>
+                            )}
+
+                            <div className="grid md:grid-cols-2 gap-4 mt-4">
+                              <div className="min-w-0">
+                              <Select
+                                label="Kategori Laptop"
+                                value={form.category}
+                                onChange={e => handleSelect("category", e.target.value)}
+                                options={laptopCategories}
+                              />
+                              </div>
+                              <div className="min-w-0">
+                              <Select
+                                label="Jumlah Kipas Pendingin"
+                                value={form.fan}
+                                onChange={e => handleSelect("fan", e.target.value)}
+                                options={fanCounts}
+                              />
+                              </div>
+                            </div>
               <div className="min-w-0">
               <Input
                 label="Keluhan atau kondisi"
