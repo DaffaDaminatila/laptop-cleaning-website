@@ -98,15 +98,21 @@ export default function BookingForm() {
   const minDate = getMinDate();
 
   const estimate = useMemo(() => {
-    if (!form.brand || !form.model) return null;
-    return calculateEstimate({
-      category: form.category,
-      fan: form.fan,
-      mainService: form.mainService,
-      extras: form.extras as any,
-      thermalPaste: form.thermalPaste as any,
-    });
-  }, [form]);
+      // Hitung estimasi begitu data pricing utama lengkap (kategori, kipas, layanan)
+      // Brand & Model hanya untuk identifikasi, tidak butuh buat hitung harga
+      const hasPricingData = form.category !== "unknown" && 
+                             form.fan !== "unknown" && 
+                             form.mainService !== "none";
+      if (!hasPricingData) return null;
+    
+      return calculateEstimate({
+        category: form.category,
+        fan: form.fan,
+        mainService: form.mainService,
+        extras: form.extras as any,
+        thermalPaste: form.thermalPaste as any,
+      });
+    }, [form.category, form.fan, form.mainService, form.extras, form.thermalPaste]);
 
   const handleSelect = (field: string, value: string) => setForm({ ...form, [field]: value });
 
