@@ -7,9 +7,9 @@ export default function Contact() {
   // Base location from transport config
   const baseLocation = {
     name: "DAFFA LAPTOP CLEANING SERVICE",
-    address: "RT 03 RW 08, Harjasari, Kec. Bogor Sel., Kota Bogor, Jawa Barat 16138",
-    mapsUrl: "https://www.google.com/maps/search/?api=1&query=-6.6609,106.8431",
-    embedUrl: "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3966.0!2d106.8431!3d-6.6609!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2zNsKwMzk3JzM5LjIiUyAxMDZcKzUwJzM1LjEiRQ!5e0!3m2!1sid!2sid!4v1699999999999",
+    address: "GIRANGSARI, 06/08, Harjasari, Bogor Selatan, 16138",
+    mapsUrl: "https://www.google.com/maps/search/?api=1&query=-6.659186546626838,106.84142298108236",
+    embedUrl: "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3966.0!2d106.84142298108236!3d-6.659186546626838!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2zNsKwMzkzJzMzLjIiUyAxMDZcKzUwJzI5LjEiRQ!5e0!3m2!1sid!2sid!4v1699999999999",
   };
 
   return (
@@ -162,7 +162,7 @@ export default function Contact() {
           </h3>
           <div className="relative rounded-2xl overflow-hidden border border-slate-200 shadow-sm" style={{ aspectRatio: "16/9" }}>
             <iframe
-                                      title="Lokasi DAFFA LAPTOP CLEANING SERVICE - Harjasari, Bogor Selatan"
+                                      title="Lokasi DAFFA LAPTOP CLEANING SERVICE - Girangsari, Harjasari, Bogor Selatan"
                                       src={baseLocation.embedUrl}
                                       style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", border: 0 }}
                                       allowFullScreen
@@ -171,7 +171,7 @@ export default function Contact() {
                                     />
                       </div>
                       <p className="text-center text-sm text-slate-500 mt-3">
-                        Base operasional: RT 03 RW 08, Harjasari, Bogor Selatan 16138
+                        Base operasional: GIRANGSARI, 06/08, Harjasari, Bogor Selatan 16138
                       </p>
         </div>
       </div>

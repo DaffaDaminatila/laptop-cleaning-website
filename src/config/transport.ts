@@ -1,7 +1,7 @@
 /**
  * Transport pricing configuration
- * Base: RT 03 RW 08, Harjasari, Kec. Bogor Sel., Kota Bogor, Jawa Barat 16138
- * Koordinat: -6.6609, 106.8431 (Harjasari, Bogor Selatan, Bogor)
+ * Base: GIRANGSARI, 06/08, Harjasari, Bogor Selatan, 16138
+ * Koordinat: -6.659186546626838, 106.84142298108236
  */
 
 export interface TransportTier {
@@ -22,11 +22,11 @@ export const TRANSPORT_TIERS: TransportTier[] = [
 ];
 
 export const BASE_LOCATION = {
-  name: "Base Operasional (Harjasari, Bogor Selatan)",
-  address: "RT 03 RW 08, Harjasari, Kec. Bogor Sel., Kota Bogor, Jawa Barat 16138",
-  // Koordinat Harjasari, Bogor Selatan, Bogor
-  lat: -6.6609,
-  lng: 106.8431,
+  name: "Base Operasional (Girangsari, Harjasari, Bogor Selatan)",
+  address: "GIRANGSARI, 06/08, Harjasari, Bogor Selatan, 16138",
+  // Koordinat exact: Girangsari, Harjasari, Bogor Selatan
+  lat: -6.659186546626838,
+  lng: 106.84142298108236,
 };
 
 export function getTransportPrice(km: number): { tier: TransportTier; price: number; needsConfirmation: boolean } {
