@@ -351,9 +351,9 @@ export default function BookingForm() {
                                         </div>
                                       )}
                                       <p className="text-[11px] text-slate-500 mt-2 leading-relaxed">
-                                        * Jarak dihitung garis lurus dari base Ciawi, Bogor. Harga final dikonfirmasi via WhatsApp.
-                                        Base: Gg. Inpres, Teluk Pinang, Ciawi, Bogor 16138.
-                                      </p>
+                                                                              * Jarak dihitung garis lurus dari base Harjasari, Bogor Selatan. Harga final dikonfirmasi via WhatsApp.
+                                                                              Base: RT 03 RW 08, Harjasari, Bogor Selatan 16138.
+                                                                            </p>
                                     </div>
                                   )}
                                 </div>

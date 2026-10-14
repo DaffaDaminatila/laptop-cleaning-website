@@ -1,7 +1,7 @@
 /**
  * Transport pricing configuration
- * Base: Gg. Inpres, RT.01/RW.06, Tlk. Pinang, Kec. Ciawi, Kota Bogor, Jawa Barat 16138
- * Koordinat approx: -6.6185, 106.8205 (Teluk Pinang, Ciawi, Bogor)
+ * Base: RT 03 RW 08, Harjasari, Kec. Bogor Sel., Kota Bogor, Jawa Barat 16138
+ * Koordinat: -6.6609, 106.8431 (Harjasari, Bogor Selatan, Bogor)
  */
 
 export interface TransportTier {
@@ -22,11 +22,11 @@ export const TRANSPORT_TIERS: TransportTier[] = [
 ];
 
 export const BASE_LOCATION = {
-  name: "Base Operasional (Ciawi, Bogor)",
-  address: "Gg. Inpres, RT.01/RW.06, Tlk. Pinang, Kec. Ciawi, Kota Bogor, Jawa Barat 16138",
-  // Koordinat approx Teluk Pinang, Ciawi, Bogor
-  lat: -6.6185,
-  lng: 106.8205,
+  name: "Base Operasional (Harjasari, Bogor Selatan)",
+  address: "RT 03 RW 08, Harjasari, Kec. Bogor Sel., Kota Bogor, Jawa Barat 16138",
+  // Koordinat Harjasari, Bogor Selatan, Bogor
+  lat: -6.6609,
+  lng: 106.8431,
 };
 
 export function getTransportPrice(km: number): { tier: TransportTier; price: number; needsConfirmation: boolean } {
