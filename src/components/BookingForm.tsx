@@ -149,25 +149,25 @@ export default function BookingForm() {
       } | null>(null);
 
       // Auto-calculate transport when address changes (only for panggilan)
-      useEffect(() => {
-        if (form.serviceType !== "panggilan" || !form.address.trim()) {
-          setTransport(null);
-          return;
-        }
+            useEffect(() => {
+              if (form.serviceType !== "panggilan" || !form.address.trim()) {
+                setTransport(null);
+                return;
+              }
 
-        const runTransportCalc = async () => {
-          setTransport(prev => prev ? { ...prev, calculating: true } : null);
-          try {
-            const result = await calculateTransportCost(form.address);
-            setTransport({ ...result, calculating: false });
-          } catch (e) {
-            console.error("Transport calc error:", e);
-            setTransport({ km: 0, price: 0, tierLabel: "Error", needsConfirmation: true, geocodedAddress: null, calculating: false, error: "Gagal menghitung jarak" });
-          }
-        };
+              const runTransportCalc = async () => {
+                setTransport(prev => prev ? { ...prev, calculating: true } : null);
+                try {
+                  const result = await calculateTransportCost(form.address, form.locationLink);
+                  setTransport({ ...result, calculating: false });
+                } catch (e) {
+                  console.error("Transport calc error:", e);
+                  setTransport({ km: 0, price: 0, tierLabel: "Error", needsConfirmation: true, geocodedAddress: null, calculating: false, error: "Gagal menghitung jarak" });
+                }
+              };
 
-        runTransportCalc();
-      }, [form.address, form.serviceType]);
+              runTransportCalc();
+            }, [form.address, form.locationLink, form.serviceType]);
 
       const estimate = useMemo(() => {
       // Hitung estimasi begitu data pricing utama lengkap (kategori, kipas, layanan)
@@ -308,11 +308,11 @@ export default function BookingForm() {
                                         <span className="font-semibold text-slate-900">Estimasi Ongkos Panggilan</span>
                                       </div>
                                       {transport && transport.calculating && (
-                                        <div className="flex items-center gap-3 text-sm text-blue-700">
-                                          <Loader2 size={18} className="animate-spin" />
-                                          Menghitung jarak dari base Ciawi...
-                                        </div>
-                                      )}
+                                                                              <div className="flex items-center gap-3 text-sm text-blue-700">
+                                                                                <Loader2 size={18} className="animate-spin" />
+                                                                                Menghitung jarak dari base Girangsari...
+                                                                              </div>
+                                                                            )}
                                       {transport && !transport.calculating && !transport.error && (
                                         <div className="space-y-2">
                                           <div className="flex justify-between gap-2 text-sm">

@@ -67,6 +67,55 @@ function toRad(deg: number): number {
 }
 
 /**
+ * Parse Google Maps URL to extract coordinates
+ * Supports formats:
+ * - https://www.google.com/maps/search/?api=1&query=-6.123,106.456
+ * - https://www.google.com/maps/@-6.123,106.456,15z
+ * - https://www.google.com/maps/place/Something/@-6.123,106.456,15z
+ * - https://maps.google.com/?q=-6.123,106.456
+ * - https://goo.gl/maps/xxx (shortened - would need redirect follow, skip for now)
+ * - Direct coordinates: "-6.123, 106.456"
+ */
+export function parseGoogleMapsUrl(url: string): { lat: number; lng: number } | null {
+  try {
+    // Direct coordinates: "-6.123, 106.456" or "-6.123,106.456"
+    const directCoord = url.trim().match(/^(-?\d+\.?\d*),\s*(-?\d+\.?\d*)$/);
+    if (directCoord) {
+      const lat = parseFloat(directCoord[1]);
+      const lng = parseFloat(directCoord[2]);
+      if (!isNaN(lat) && !isNaN(lng) && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
+        return { lat, lng };
+      }
+    }
+
+    // Google Maps URL patterns
+    const patterns = [
+      // /@lat,lng,zoom
+      /@(-?\d+\.?\d*),(-?\d+\.?\d*)/,
+      // /query=lat,lng or ?q=lat,lng
+      /[?&](?:query|q)=(-?\d+\.?\d*),(-?\d+\.?\d*)/,
+      // /place/.../@lat,lng
+      /\/place\/[^@]*@(-?\d+\.?\d*),(-?\d+\.?\d*)/,
+    ];
+
+    for (const pattern of patterns) {
+      const match = url.match(pattern);
+      if (match) {
+        const lat = parseFloat(match[1]);
+        const lng = parseFloat(match[2]);
+        if (!isNaN(lat) && !isNaN(lng) && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
+          return { lat, lng };
+        }
+      }
+    }
+
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Geocode address using OpenStreetMap Nominatim (free, no API key)
  * Returns { lat, lng, displayName } or null if not found
  */
@@ -95,9 +144,13 @@ export async function geocodeAddress(address: string): Promise<{ lat: number; ln
 
 /**
  * Calculate transport cost from base to customer address
- * Returns { km, price, tierLabel, needsConfirmation, geocodedAddress }
+ * Priority: Google Maps link (exact coords) → Nominatim geocoding
+ * Returns { km, price, tierLabel, needsConfirmation, geocodedAddress, error? }
  */
-export async function calculateTransportCost(customerAddress: string): Promise<{
+export async function calculateTransportCost(
+  customerAddress: string,
+  locationLink?: string
+): Promise<{
   km: number;
   price: number;
   tierLabel: string;
@@ -105,17 +158,33 @@ export async function calculateTransportCost(customerAddress: string): Promise<{
   geocodedAddress: string | null;
   error?: string;
 }> {
-  // Geocode customer address
-  const geo = await geocodeAddress(customerAddress);
+  let geo: { lat: number; lng: number; displayName: string } | null = null;
+
+  // 1. Try Google Maps link first (exact coordinates)
+  if (locationLink && locationLink.trim()) {
+    const parsed = parseGoogleMapsUrl(locationLink.trim());
+    if (parsed) {
+      geo = {
+        lat: parsed.lat,
+        lng: parsed.lng,
+        displayName: `Koordinat dari Google Maps (${parsed.lat.toFixed(6)}, ${parsed.lng.toFixed(6)})`,
+      };
+    }
+  }
+
+  // 2. Fallback to Nominatim geocoding
   if (!geo) {
-    return {
-      km: 0,
-      price: 0,
-      tierLabel: "Tidak dapat menghitung",
-      needsConfirmation: true,
-      geocodedAddress: null,
-      error: "Alamat tidak ditemukan. Silakan masukkan alamat lengkap atau link Google Maps.",
-    };
+    geo = await geocodeAddress(customerAddress);
+    if (!geo) {
+      return {
+        km: 0,
+        price: 0,
+        tierLabel: "Tidak dapat menghitung",
+        needsConfirmation: true,
+        geocodedAddress: null,
+        error: "Alamat tidak ditemukan. Silakan masukkan alamat lengkap atau link Google Maps untuk akurasi maksimal.",
+      };
+    }
   }
 
   // Calculate straight-line distance
