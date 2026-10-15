@@ -55,18 +55,12 @@ export function calculateEstimate(input: EstimateInput): EstimateResult {
   }
 
   if (input.mainService === "deep-repasta" && input.thermalPaste === "mx4") {
-    lines.push({ label: "Add-on ARCTIC MX-4", amount: "Rp" + MX4_ADDON.toLocaleString("id-ID") });
-    totalMin += MX4_ADDON;
-    if (totalMax !== null) totalMax += MX4_ADDON;
-  }
-
-  if (input.category === "unknown" || input.fan === "unknown") {
-    if (input.mainService !== "none") {
-      needsConfirmation = true;
-      notes.push("Kategori/ jumlah kipas belum diketahui — estimasi memakai tabel dasar, harga akhir dikonfirmasi via WhatsApp.");
+      lines.push({ label: "Add-on ARCTIC MX-4", amount: "Rp" + MX4_ADDON.toLocaleString("id-ID") });
+      totalMin += MX4_ADDON;
+      if (totalMax !== null) totalMax += MX4_ADDON;
     }
-  }
-  if (input.category === "gaming" && input.mainService === "deep-repasta") {
+
+    if (input.category === "gaming" && input.mainService === "deep-repasta") {
     needsConfirmation = true;
     notes.push("Laptop gaming dengan sistem pendingin khusus memerlukan konfirmasi terlebih dahulu.");
   }

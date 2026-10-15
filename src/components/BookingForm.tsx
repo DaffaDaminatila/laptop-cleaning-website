@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { Card, Button, Select, Input, Checkbox } from "./ui";
 import { Calculator, HardDrive, Monitor, Zap, UserCircle, Truck, Calendar, RefreshCw, AlertCircle, Loader2, CheckCircle2, Sparkles, MapPin } from "lucide-react";
 import { openWhatsApp, buildOrderMessage } from "../utils/whatsapp";
@@ -7,21 +7,19 @@ import { MX4_ADDON } from "../config/pricing";
 import { classifyLaptop, LaptopClassification, categoryDisplayMap, fanCountDisplayMap } from "../config/pricing";
 import { calculateTransportCost } from "../config/transport";
 
-type LaptopCategory = "biasa" | "gaming" | "unknown";
-type FanCount = "1" | "2" | "unknown";
+type LaptopCategory = "biasa" | "gaming";
+type FanCount = "1" | "2";
 type MainService = "basic" | "deep" | "deep-repasta" | "none";
 type ServiceType = "panggilan" | "antar";
 
 const laptopCategories: { value: LaptopCategory; label: string }[] = [
   { value: "biasa", label: "Laptop Biasa" },
   { value: "gaming", label: "Laptop Gaming" },
-  { value: "unknown", label: "Belum Tahu" },
 ];
 
 const fanCounts: { value: FanCount; label: string }[] = [
   { value: "1", label: "1 Kipas" },
   { value: "2", label: "2 Kipas" },
-  { value: "unknown", label: "Belum Tahu" },
 ];
 
 const mainServices: { value: MainService; label: string; description: string }[] = [
@@ -41,7 +39,6 @@ const thermalPasteOptions: { value: string; label: string; price?: number }[] = 
   { value: "z5", label: "DeepCool Z5 (Standar, sudah termasuk)", price: 0 },
   { value: "mx4", label: "ARCTIC MX-4 (add-on Rp15.000)", price: MX4_ADDON },
   { value: "none", label: "Tidak perlu ganti" },
-  { value: "consult", label: "Belum tahu, mau konsultasi" },
 ];
 
 function getMinDate(): string {
@@ -66,8 +63,8 @@ export default function BookingForm() {
     locationLink: string;
     brand: string;
     model: string;
-    category: LaptopCategory;
-    fan: FanCount;
+    category: LaptopCategory | "";
+    fan: FanCount | "";
     issue: string;
     mainService: MainService;
     extras: string[];
@@ -84,8 +81,8 @@ export default function BookingForm() {
     locationLink: "",
     brand: "",
     model: "",
-    category: "unknown",
-    fan: "unknown",
+    category: "",
+    fan: "",
     issue: "",
     mainService: "none",
     extras: [],
@@ -97,45 +94,61 @@ export default function BookingForm() {
   });
 
   const [touched, setTouched] = useState<Record<string, boolean>>({});
-    const minDate = getMinDate();
+        const minDate = getMinDate();
 
-    // Auto-classification state
-    const [classification, setClassification] = useState<LaptopClassification | null>(null);
-    const [isClassifying, setIsClassifying] = useState(false);
-    const [showManualOverride, setShowManualOverride] = useState(false);
+        // Auto-classification state
+        const [classification, setClassification] = useState<LaptopClassification | null>(null);
+        const [isClassifying, setIsClassifying] = useState(false);
+        const [showManualOverride, setShowManualOverride] = useState(false);
+        const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+        const previousBrandModelRef = useRef<{ brand: string; model: string } | null>(null);
 
-    // Auto-classify when brand & model change
-      useEffect(() => {
-        if (!form.brand.trim() || !form.model.trim()) {
-          setClassification(null);
-          return;
-        }
-  
-        const runClassification = async () => {
-          setIsClassifying(true);
-          try {
-            // Keyword-based instant classification
-            const result = classifyLaptop(form.brand, form.model);
-            setClassification(result);
-            setShowManualOverride(result.confidence !== "high");
-     
-            // Auto-fill if high confidence
-            if (result.confidence === "high") {
-              setForm(prev => ({
-                ...prev,
-                category: result.category,
-                fan: result.fanCount,
-              }));
+        // Auto-classify when brand & model change (debounced)
+          useEffect(() => {
+            const brand = form.brand.trim();
+            const model = form.model.trim();
+
+            if (!brand || !model) {
+              if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+              return;
             }
-          } catch (e) {
-            console.error("Classification error:", e);
-          } finally {
-            setIsClassifying(false);
-          }
-        };
 
-        runClassification();
-      }, [form.brand, form.model]);
+            // Debounce 300ms sebelum jalankan klasifikasi
+            debounceTimerRef.current = setTimeout(() => {
+              // Cek apakah brand/model berubah sejak terakhir kali
+              const prev = previousBrandModelRef.current;
+              if (prev && prev.brand === brand && prev.model === model) {
+                return; // Belum berubah, biarkan klasifikasi class berko
+              }
+
+              previousBrandModelRef.current = { brand, model };
+
+              const runClassification = async () => {
+                setIsClassifying(true);
+                try {
+                  const result = classifyLaptop(brand, model);
+                  setClassification(result);
+
+                  setForm(prev => ({
+                    ...prev,
+                    category: result.category,
+                    fan: result.fanCount,
+                  }));
+                } catch (e) {
+                  console.error("Classification error:", e);
+                } finally {
+                  setIsClassifying(false);
+                }
+              };
+
+              runClassification();
+            }, 300);
+
+            // Cleanup function
+            return () => {
+              if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+            };
+          }, [form.brand, form.model]);
 
       // Transport calculation state
       const [transport, setTransport] = useState<{
@@ -170,34 +183,36 @@ export default function BookingForm() {
             }, [form.address, form.locationLink, form.serviceType]);
 
       const estimate = useMemo(() => {
-      // Hitung estimasi begitu data pricing utama lengkap (kategori, kipas, layanan)
-      // Brand & Model hanya untuk identifikasi, tidak butuh buat hitung harga
-      const hasPricingData = form.category !== "unknown" && 
-                             form.fan !== "unknown" && 
-                             form.mainService !== "none";
-      if (!hasPricingData) return null;
-    
-      return calculateEstimate({
-        category: form.category,
-        fan: form.fan,
-        mainService: form.mainService,
-        extras: form.extras as any,
-        thermalPaste: form.thermalPaste as any,
-      });
-    }, [form.category, form.fan, form.mainService, form.extras, form.thermalPaste]);
+                  // Hitung estimasi begitu data pricing utama lengkap (kategori, kipas, layanan)
+                  // Brand & Model hanya untuk identifikasi, tidak butuh buat hitung harga
+                  const hasPricingData = form.category && form.fan && form.mainService !== "none";
+                  if (!hasPricingData) return null;
 
-  const handleSelect = (field: string, value: string) => setForm({ ...form, [field]: value });
+            return calculateEstimate({
+              category: form.category as LaptopCategory,
+              fan: form.fan as FanCount,
+              mainService: form.mainService,
+              extras: form.extras as any,
+              thermalPaste: form.thermalPaste as any,
+            });
+          }, [form.category, form.fan, form.mainService, form.extras, form.thermalPaste]);
+
+  const handleSelect = (field: string, value: string) => setForm(prev => ({ ...prev, [field]: value }));
 
   const validateForm = (): boolean => {
-      const required = ["name", "brand", "model", "serviceType", "address", "mainService", "date", "time"];
-      const newTouched: Record<string, boolean> = {};
-      required.forEach(f => newTouched[f] = true);
-      const basicValid = required.every(f => form[f as keyof typeof form] && String(form[f as keyof typeof form]).trim() !== "");
-      const policyValid = form.serviceType === "antar" ? true : form.agreePolicy === true;
-      if (!policyValid) newTouched["agreePolicy"] = true;
-      setTouched(newTouched);
-      return basicValid && policyValid;
-    };
+            const required = ["name", "brand", "model", "serviceType", "address", "category", "fan", "mainService", "date", "time"];
+            const newTouched: Record<string, boolean> = {};
+            required.forEach(f => newTouched[f] = true);
+            const basicValid = required.every(f => {
+              const val = form[f as keyof typeof form];
+              if (!val || String(val).trim() === "") return false;
+              return true;
+            });
+            const policyValid = form.serviceType === "antar" ? true : form.agreePolicy === true;
+            if (!policyValid) newTouched["agreePolicy"] = true;
+            setTouched(newTouched);
+            return basicValid && policyValid;
+          };
 
     const handleSubmit = async (e: React.FormEvent) => {
           e.preventDefault();
@@ -250,7 +265,7 @@ export default function BookingForm() {
                 <Input
                   label="Nama Lengkap *"
                   value={form.name}
-                  onChange={e => setForm({ ...form, name: e.target.value })}
+                  onChange={e => setForm(prev => ({ ...prev, name: e.target.value }))}
                   error={touched.name && !form.name ? "Nama wajib diisi" : undefined}
                   placeholder="Nama lengkap Anda"
                 />
@@ -259,7 +274,7 @@ export default function BookingForm() {
                 <Input
                   label="Nomor WhatsApp"
                   value={form.whatsapp}
-                  onChange={e => setForm({ ...form, whatsapp: e.target.value })}
+                  onChange={e => setForm(prev => ({ ...prev, whatsapp: e.target.value }))}
                   placeholder="62812xxxxxx"
                 />
                 </div>
@@ -287,14 +302,14 @@ export default function BookingForm() {
                   <Input
                     label={form.serviceType === "panggilan" ? "Alamat Lengkap *" : "Lokasi Penyerahan"}
                     value={form.address}
-                    onChange={e => setForm({ ...form, address: e.target.value })}
+                    onChange={e => setForm(prev => ({ ...prev, address: e.target.value }))}
                     error={touched.address && !form.address ? "Alamat wajib diisi" : undefined}
                     placeholder="Alamat lengkap atau nama jalan..."
                   />
                   <Input
                                       label="Link Google Maps (opsional)"
                                       value={form.locationLink}
-                                      onChange={e => setForm({ ...form, locationLink: e.target.value })}
+                                      onChange={e => setForm(prev => ({ ...prev, locationLink: e.target.value }))}
                                       placeholder="https://maps.google.com/..."
                                       className="mt-2"
                                     />
@@ -369,7 +384,7 @@ export default function BookingForm() {
                               <Input
                                 label="Merek Laptop *"
                                 value={form.brand}
-                                onChange={e => setForm({ ...form, brand: e.target.value })}
+                                onChange={e => setForm(prev => ({ ...prev, brand: e.target.value }))}
                                 error={touched.brand && !form.brand ? "Merek wajib diisi" : undefined}
                                 placeholder="Dell, HP, ASUS, Lenovo..."
                               />
@@ -378,7 +393,7 @@ export default function BookingForm() {
                               <Input
                                 label="Model Laptop *"
                                 value={form.model}
-                                onChange={e => setForm({ ...form, model: e.target.value })}
+                                onChange={e => setForm(prev => ({ ...prev, model: e.target.value }))}
                                 error={touched.model && !form.model ? "Model wajib diisi" : undefined}
                                 placeholder="Model spesifik laptop"
                               />
@@ -455,7 +470,7 @@ export default function BookingForm() {
               <Input
                 label="Keluhan atau kondisi"
                 value={form.issue}
-                onChange={e => setForm({ ...form, issue: e.target.value })}
+                onChange={e => setForm(prev => ({ ...prev, issue: e.target.value }))}
                 placeholder="misal: laptop sering hang, pendinginan tidak baik..."
                 className="mt-4"
               />
@@ -499,9 +514,9 @@ export default function BookingForm() {
                       checked={form.extras.includes(e.value)}
                       onCheckedChange={checked => {
                         if (checked) {
-                          setForm({ ...form, extras: [...form.extras, e.value] });
+                          setForm(prev => ({ ...prev, extras: [...prev.extras, e.value] }));
                         } else {
-                          setForm({ ...form, extras: form.extras.filter(x => x !== e.value) });
+                          setForm(prev => ({ ...prev, extras: prev.extras.filter(x => x !== e.value) }));
                         }
                       }}
                       label=""
@@ -563,7 +578,7 @@ export default function BookingForm() {
                   type="date"
                   min={minDate}
                   value={form.date}
-                  onChange={e => setForm({ ...form, date: e.target.value })}
+                  onChange={e => setForm(prev => ({ ...prev, date: e.target.value }))}
                   error={touched.date && !form.date ? "Tanggal wajib diisi (minimal besok)" : undefined}
                 />
                 </div>
@@ -571,7 +586,7 @@ export default function BookingForm() {
                 <Input
                   label="Rentang waktu *"
                   value={form.time}
-                  onChange={e => setForm({ ...form, time: e.target.value })}
+                  onChange={e => setForm(prev => ({ ...prev, time: e.target.value }))}
                   error={touched.time && !form.time ? "Waktu wajib diisi" : undefined}
                   placeholder="misal: 09.00 - 12.00"
                 />
@@ -587,7 +602,7 @@ export default function BookingForm() {
               <Input
                 label="Catatan tambahan"
                 value={form.note}
-                onChange={e => setForm({ ...form, note: e.target.value })}
+                onChange={e => setForm(prev => ({ ...prev, note: e.target.value }))}
                 placeholder="Spesifikasi tambahan, masalah khusus..."
                 className="mt-4"
               />
@@ -678,7 +693,7 @@ export default function BookingForm() {
                 <label className="flex items-start gap-3 cursor-pointer">
                   <Checkbox
                     checked={form.agreePolicy}
-                    onCheckedChange={checked => setForm({ ...form, agreePolicy: checked })}
+                    onCheckedChange={checked => setForm(prev => ({ ...prev, agreePolicy: checked }))}
                     label=""
                   />
                   <div className="text-[13px] sm:text-sm text-emerald-900 leading-relaxed pt-0.5 min-w-0 break-words">

@@ -1,5 +1,5 @@
-export type LaptopCategory = "biasa" | "gaming" | "unknown";
-export type FanCount = "1" | "2" | "unknown";
+export type LaptopCategory = "biasa" | "gaming";
+export type FanCount = "1" | "2";
 export type MainService = "basic" | "deep" | "deep-repasta" | "none";
 export type ExtraService =
   | "windows"
@@ -7,7 +7,7 @@ export type ExtraService =
   | "backup"
   | "ssd-check"
   | "exterior";
-export type ThermalPaste = "z5" | "mx4" | "none" | "consult";
+export type ThermalPaste = "z5" | "mx4" | "none";
 
 export interface PriceValue {
   min: number;
@@ -25,12 +25,6 @@ export const cleaningPrices: Record<string, Record<MainService, PriceValue>> = {
     basic: { min: 100000, max: null },
     deep: { min: 150000, max: null },
     "deep-repasta": { min: 200000, max: 450000 },
-    none: { min: 0, max: null },
-  },
-  unknown: {
-    basic: { min: 0, max: null },
-    deep: { min: 0, max: null },
-    "deep-repasta": { min: 0, max: null },
     none: { min: 0, max: null },
   },
 };
@@ -59,9 +53,8 @@ export const MX4_ADDON = 15000;
  * Menentukan kunci harga berdasarkan kategori laptop dan jumlah kipas.
  * Sederhana: biasa -> biasa, gaming + 1 kipas -> gaming1, gaming + 2 kipas -> gaming2
  */
-export function priceKey(category: LaptopCategory, fan: FanCount): string {
-  if (category === "gaming" && fan === "2") return "gaming2";
-  if (category === "gaming") return "gaming1"; // gaming 1 fan atau belum tahu -> pakai tabel 1 fan
+export function priceKey(category: LaptopCategory, _fan: FanCount): string {
+  if (category === "gaming") return "gaming";
   return "biasa";
 }
 
@@ -191,9 +184,9 @@ export function classifyLaptop(
   }
 
   // Cek jumlah kipas
-  let fanCount: FanCount = "unknown";
+  let fanCount: FanCount = "1";
   let fanConfidence: "high" | "medium" | "low" = "low";
-  let fanReason = "Tidak terdeteksi info kipas";
+  let fanReason = "Default 1 kipas";
 
   for (const kw of FAN2_KEYWORDS) {
     if (text.includes(kw.toLowerCase())) {
@@ -205,7 +198,7 @@ export function classifyLaptop(
   }
 
   // Heuristik tambahan: gaming series biasanya 2 fan
-  if (category === "gaming" && fanCount === "unknown") {
+  if (category === "gaming" && fanCount === "1") {
     fanCount = "2"; // asumsi default gaming = 2 kipas
     fanConfidence = "medium";
     fanReason = "Asumsi default laptop gaming = 2 kipas";
@@ -286,11 +279,9 @@ export async function autoClassifyLaptop(
 export const categoryDisplayMap: Record<LaptopCategory, string> = {
   biasa: "Laptop Biasa",
   gaming: "Laptop Gaming",
-  unknown: "Belum Tahu",
 };
 
 export const fanCountDisplayMap: Record<FanCount, string> = {
   1: "1 Kipas",
   2: "2 Kipas",
-  unknown: "Belum Tahu",
 };
