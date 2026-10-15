@@ -125,6 +125,13 @@ const GAMING_KEYWORDS = [
   "xplay",
   "aorus",
   "g5",
+  // Tambahan dari data klasifikasi laptop pengguna
+  "vivobook",
+  "expertbook",
+  "zenbook",
+  "ideapad gaming",
+  "g series",
+  "aorus",
   // GPU keywords
   "rtx",
   "gtx",
@@ -161,6 +168,11 @@ const FAN2_KEYWORDS = [
   "2kipa",
   "dual kipas",
   "twin kipas",
+  // Tambahan 3 kipas dari data pengguna
+  "3 fan",
+  "3 kipas",
+  "triple fan",
+  "3x fan",
 ];
 
 export function classifyLaptop(
